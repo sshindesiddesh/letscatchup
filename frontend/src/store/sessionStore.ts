@@ -9,14 +9,15 @@
 
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { 
-  SessionStore, 
-  SessionData, 
-  User, 
-  UIState, 
-  KeywordData, 
-  ParticipantData 
+import type {
+  SessionStore,
+  SessionData,
+  User,
+  UIState,
+  KeywordData,
+  ParticipantData
 } from '../types';
+import type { OnboardingResponses } from '../components/OnboardingFlow';
 
 // Initial UI state
 const initialUIState: UIState = {
@@ -35,6 +36,7 @@ export const useSessionStore = create<SessionStore>()(
         session: null,
         user: null,
         ui: initialUIState,
+        onboardingResponses: {},
 
         // Session actions
         setSession: (session: SessionData) => {
@@ -179,6 +181,19 @@ export const useSessionStore = create<SessionStore>()(
           );
         },
 
+        setOnboardingResponse: (userId: string, responses: any) => {
+          set(
+            (state) => ({
+              onboardingResponses: {
+                ...state.onboardingResponses,
+                [userId]: responses
+              }
+            }),
+            false,
+            'setOnboardingResponse'
+          );
+        },
+
         // Reset store
         reset: () => {
           set(
@@ -186,6 +201,7 @@ export const useSessionStore = create<SessionStore>()(
               session: null,
               user: null,
               ui: initialUIState,
+              onboardingResponses: {},
             },
             false,
             'reset'

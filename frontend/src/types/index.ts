@@ -123,9 +123,12 @@ export interface SessionStore {
   // Session data
   session: SessionData | null;
   user: User | null;
-  
+
   // UI state
   ui: UIState;
+
+  // Onboarding data
+  onboardingResponses: Record<string, any>; // userId -> responses
   
   // Actions
   setSession: (session: SessionData) => void;
@@ -138,6 +141,7 @@ export interface SessionStore {
   setError: (error: string | null) => void;
   setConnected: (connected: boolean) => void;
   setTypingUsers: (users: string[]) => void;
+  setOnboardingResponse: (userId: string, responses: any) => void;
   reset: () => void;
 }
 

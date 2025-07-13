@@ -9,19 +9,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useJoinSession } from '../hooks/useSession';
+import { useJoinSession, useAddKeyword } from '../hooks/useSession';
+import { useSessionStore } from '../store/sessionStore';
 import { apiService } from '../services/apiService';
+import OnboardingFlow, { OnboardingResponses } from './OnboardingFlow';
 import type { SessionData } from '../types';
 
 export function JoinSession() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { joinSession, isLoading, error } = useJoinSession();
-  
+  const { addKeyword } = useAddKeyword();
+  const { setOnboardingResponse } = useSessionStore();
+
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingResponses, setOnboardingResponses] = useState<OnboardingResponses | null>(null);
 
   // Load session data on mount
   useEffect(() => {
@@ -46,15 +52,43 @@ export function JoinSession() {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim() || !sessionId) return;
 
     try {
       await joinSession(sessionId, { name: name.trim() });
-      navigate(`/session/${sessionId}`);
+
+      // Show onboarding flow after successful join
+      setShowOnboarding(true);
     } catch (err) {
       console.error('Failed to join session:', err);
     }
+  };
+
+  const handleOnboardingComplete = async (responses: OnboardingResponses) => {
+    setOnboardingResponses(responses);
+
+    // Save responses to store (we'll need the user ID from the join response)
+    // For now, we'll save it with a temporary key and update it later
+    setOnboardingResponse('temp', responses);
+
+    // Add initial suggestions from onboarding
+    if (responses.initialSuggestions.length > 0) {
+      try {
+        for (const suggestion of responses.initialSuggestions) {
+          await addKeyword(suggestion.text, suggestion.category);
+        }
+      } catch (error) {
+        console.error('Failed to add initial suggestions:', error);
+      }
+    }
+
+    // Navigate to session
+    navigate(`/session/${sessionId}`);
+  };
+
+  const handleSkipOnboarding = () => {
+    navigate(`/session/${sessionId}`);
   };
 
   if (loadingSession) {
@@ -85,6 +119,46 @@ export function JoinSession() {
               Create New Session
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show onboarding flow after successful join
+  if (showOnboarding && sessionData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50">
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl">🤝</div>
+                <h1 className="text-xl font-bold text-gray-900">letscatchup.ai</h1>
+              </div>
+              <div className="text-sm text-gray-500">
+                Welcome to "{sessionData.description}"
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Onboarding Content */}
+        <div className="px-6 py-12">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Welcome, {name}! 👋
+            </h2>
+            <p className="text-lg text-gray-600">
+              Let's personalize your experience and help you contribute to the planning
+            </p>
+          </div>
+
+          <OnboardingFlow
+            sessionData={sessionData}
+            onComplete={handleOnboardingComplete}
+            onSkip={handleSkipOnboarding}
+          />
         </div>
       </div>
     );
