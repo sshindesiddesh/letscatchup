@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { useSessionConnection } from './hooks/useSession'
 import { useUIState } from './store/sessionStore'
 import SessionTest from './components/SessionTest'
+import CreateSession from './components/CreateSession'
+import SessionPage from './components/SessionPage'
+import JoinSession from './components/JoinSession'
 
 function App() {
   return (
@@ -40,10 +43,11 @@ function AppContent() {
 
       {/* Main Routes */}
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<CreateSession />} />
         <Route path="/test" element={<SessionTest />} />
-        <Route path="/session/:sessionId" element={<SessionPage />} />
-        <Route path="/join/:sessionId" element={<JoinPage />} />
+        <Route path="/session/:sessionId" element={<SessionPageWrapper />} />
+        <Route path="/join/:sessionId" element={<JoinPageWrapper />} />
+        <Route path="/demo" element={<HomePage />} />
       </Routes>
     </>
   )
@@ -105,26 +109,12 @@ function HomePage() {
   )
 }
 
-function SessionPage() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="card">
-        <h2 className="text-2xl font-bold mb-4">Session Page</h2>
-        <p className="text-gray-600">Real-time collaboration interface coming soon...</p>
-      </div>
-    </div>
-  )
+function SessionPageWrapper() {
+  return <SessionPage />;
 }
 
-function JoinPage() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="card">
-        <h2 className="text-2xl font-bold mb-4">Join Session</h2>
-        <p className="text-gray-600">Friend onboarding flow coming soon...</p>
-      </div>
-    </div>
-  )
+function JoinPageWrapper() {
+  return <JoinSession />;
 }
 
 export default App
