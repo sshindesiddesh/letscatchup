@@ -6,6 +6,10 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 
+// Import our modules
+import { sessionRouter } from './routes/session';
+import { setupSocketHandlers } from './sockets/sessionSocket';
+
 // Load environment variables
 dotenv.config();
 
@@ -37,9 +41,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Basic API routes
+// API routes
+app.use('/api/session', sessionRouter);
+
 app.get('/api/status', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'letscatchup.ai backend is running!',
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development'
@@ -47,22 +53,7 @@ app.get('/api/status', (req, res) => {
 });
 
 // Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log(`User connected: ${socket.id}`);
-  
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
-  });
-  
-  // Test event for real-time functionality
-  socket.on('test-message', (data) => {
-    console.log('Received test message:', data);
-    socket.broadcast.emit('test-response', {
-      message: 'Hello from server!',
-      timestamp: new Date().toISOString()
-    });
-  });
-});
+setupSocketHandlers(io);
 
 // Start server
 server.listen(PORT, () => {
