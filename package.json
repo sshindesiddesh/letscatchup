@@ -1,30 +1,66 @@
 {
   "name": "letscatchup",
-  "version": "1.0.0",
-  "description": "A collaborative meeting planner for 2-20 friends with real-time visual preference matching",
+  "version": "0.2.0",
+  "description": "Collaborative meeting planner for friends - Real-time scheduling made simple",
   "main": "index.js",
   "scripts": {
-    "dev": "docker-compose up --build",
-    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "build": "cd frontend && npm run build",
-    "test": "npm run test:frontend && npm run test:backend",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "start": "npm run start:backend",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run preview",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
     "test:frontend": "cd frontend && npm test",
-    "test:backend": "cd backend && npm test"
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "cd backend && npm run format",
+    "format:frontend": "cd frontend && npm run format",
+    "clean": "npm run clean:backend && npm run clean:frontend",
+    "clean:backend": "cd backend && npm run clean",
+    "clean:frontend": "cd frontend && npm run clean",
+    "setup": "npm run install:all && npm run build",
+    "reset": "npm run clean && rm -rf node_modules backend/node_modules frontend/node_modules && npm run install:all"
   },
   "keywords": [
     "collaboration",
     "meeting-planner",
     "real-time",
+    "socket.io",
     "react",
-    "nodejs",
-    "socket.io"
+    "typescript",
+    "planning",
+    "scheduling",
+    "llm",
+    "ollama"
   ],
-  "author": "Siddesh Shinde <your-email@domain.com>",
+  "author": "Siddesh Shinde",
   "license": "MIT",
-  "copyright": "Copyright (c) 2025 Siddesh Shinde. Trademarks protected separately.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sshindesiddesh/letscatchup.git"
+  },
+  "homepage": "https://github.com/sshindesiddesh/letscatchup#readme",
+  "bugs": {
+    "url": "https://github.com/sshindesiddesh/letscatchup/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
-  }
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "private": true
 }

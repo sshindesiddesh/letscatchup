@@ -4,35 +4,59 @@
 
 ## 🏗️ System Architecture
 
-### High-Level Overview
+### Current Implementation
 ```mermaid
 graph TB
-    subgraph "Frontend (React + TypeScript)"
-        UI[User Interface]
-        State[State Management]
-        Socket[Socket.io Client]
+    subgraph "Frontend (React + TypeScript + Vite)"
+        UI[User Interface Components]
+        Store[Zustand State Store]
+        Hooks[Custom React Hooks]
+        Services[API & Socket Services]
+        Router[React Router]
     end
-    
-    subgraph "Backend (Node.js + Express)"
-        API[REST API]
-        Manager[SessionManager]
-        SocketServer[Socket.io Server]
-        Storage[In-Memory Storage]
+
+    subgraph "Backend (Node.js + Express + Socket.io)"
+        API[REST API Routes]
+        Socket[Socket.io Server]
+        LLM[LLM Service]
+        Memory[In-Memory Session Storage]
+        Types[Shared TypeScript Types]
     end
-    
-    subgraph "Future Integrations"
-        LLM[Local LLM - Ollama]
-        DB[Database]
+
+    subgraph "External Services"
+        Ollama[Ollama LLM Server]
     end
-    
-    UI --> API
-    Socket --> SocketServer
-    API --> Manager
-    SocketServer --> Manager
-    Manager --> Storage
-    
-    API -.-> LLM
-    Storage -.-> DB
+
+    UI --> Store
+    Store --> Hooks
+    Hooks --> Services
+    Services --> API
+    Services --> Socket
+    API --> Memory
+    Socket --> Memory
+    LLM --> Ollama
+    API --> LLM
+    Router --> UI
+```
+
+### Real-time Data Flow
+```mermaid
+sequenceDiagram
+    participant User1
+    participant Frontend1
+    participant Backend
+    participant Frontend2
+    participant User2
+
+    User1->>Frontend1: Add keyword "Starbucks"
+    Frontend1->>Backend: POST /api/session/current/keywords
+    Backend->>Backend: Store keyword in memory
+    Backend->>Backend: Categorize with LLM
+    Backend->>Frontend1: Return keyword data
+    Frontend1->>Frontend1: Update UI immediately
+    Backend->>Frontend2: Socket.io broadcast "keyword-added"
+    Frontend2->>Frontend2: Update UI with new keyword
+    Frontend2->>User2: Show "Starbucks" keyword
 ```
 
 ## 🎯 Core Components

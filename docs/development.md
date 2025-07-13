@@ -5,11 +5,12 @@
 ## 🚀 Quick Setup
 
 ### Prerequisites
-- **Node.js** 18+ 
+- **Node.js** 18+
 - **npm** or **yarn**
 - **Git**
+- **Ollama** (optional, for LLM features)
 
-### Backend Setup
+### Full Stack Setup
 ```bash
 # Clone repository
 git clone https://github.com/sshindesiddesh/letscatchup.git
@@ -19,19 +20,29 @@ cd letscatchup
 cd backend
 npm install
 
-# Start development server
-npm run dev
+# Install frontend dependencies
+cd ../frontend
+npm install
 
-# Server runs on http://localhost:3001
+# Start backend (Terminal 1)
+cd backend && npm run dev
+
+# Start frontend (Terminal 2)
+cd frontend && npm run dev
 ```
+
+### Access Points
+- **Frontend**: http://localhost:3003
+- **Backend API**: http://localhost:3001
+- **Debug Route**: http://localhost:3003/debug
 
 ### Verify Installation
 ```bash
-# Test health endpoint
-curl http://localhost:3001/api/session/health
+# Test backend health
+curl http://localhost:3001/api/session/current
 
-# Expected response:
-# {"status":"ok","hasActiveSession":false,"sessionId":null,"participantCount":0,"keywordCount":0}
+# Test frontend
+open http://localhost:3003
 ```
 
 ## 🧪 Testing

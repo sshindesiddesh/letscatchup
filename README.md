@@ -1,113 +1,250 @@
 # 🤝 letscatchup.ai
 
-A collaborative meeting planner for 2-20 friends that uses natural language input and real-time visual preference matching to simplify group meetup planning.
+Collaborative meeting planner for friends - Real-time scheduling made simple.
+
+## 🚀 Features
+
+- **Real-time Collaboration**: Multiple users can contribute ideas simultaneously
+- **Smart Categorization**: AI-powered keyword categorization (food, location, activity, time)
+- **Voting System**: Democratic decision making with real-time vote tallies
+- **Session Management**: Create and join planning sessions with ease
+- **Live Updates**: See changes instantly without page refreshes
+- **Instant UI Updates**: Immediate feedback without waiting for server responses
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for fast development and building
+- **Tailwind CSS** for styling with custom design system
+- **Zustand** for state management
+- **Socket.io Client** for real-time communication
+- **React Router** for navigation
+
+### Backend
+- **Node.js** with Express
+- **TypeScript** for type safety
+- **Socket.io** for real-time WebSocket communication
+- **Ollama** for local LLM integration (keyword categorization)
+- **In-memory storage** (sessions and data)
+- **CORS** enabled for cross-origin requests
+
+## 📋 Prerequisites
+
+- **Node.js** (v18 or higher)
+- **npm** or **yarn**
+- **Ollama** (for LLM features)
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Docker and Docker Compose installed
-- No other dependencies needed!
+### 1. Clone the Repository
+```bash
+git clone https://github.com/sshindesiddesh/letscatchup.git
+cd letscatchup
+```
 
-### Run the Application
+### 2. Install Dependencies
+```bash
+# Install backend dependencies
+cd backend
+npm install
 
-1. **Clone and start the application:**
-   ```bash
-   git clone <your-repo>
-   cd letscatchup
-   docker-compose up --build
-   ```
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
 
-2. **Access the application:**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3001
-   - Ollama LLM: http://localhost:11434
+### 3. Set Up Ollama (Optional - for AI categorization)
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
 
-3. **Test multi-user functionality:**
-   - Open multiple browser tabs/windows
-   - Create a meetup in one tab
-   - Join with the shareable link in other tabs
-   - Watch real-time collaboration in action!
+# Pull the required model
+ollama pull llama3
+```
+
+### 4. Start the Services
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+npm run dev
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+### 5. Open the Application
+- Frontend: http://localhost:3003
+- Backend API: http://localhost:3001
+
+## 🎯 How to Use
+
+1. **Create a Session**
+   - Enter a session description (e.g., "Coffee meetup planning")
+   - Enter your name
+   - Click "Create Session"
+
+2. **Add Keywords**
+   - Type keywords related to your meetup (e.g., "Starbucks", "Saturday 2pm")
+   - Select appropriate category or let AI categorize automatically
+   - Keywords appear instantly for all participants
+
+3. **Vote on Ideas**
+   - Click 👍 or 👎 on any keyword
+   - See real-time vote tallies
+   - Most popular ideas rise to the top
+
+4. **Collaborate in Real-time**
+   - Share the session with friends
+   - Everyone sees updates instantly
+   - No page refreshes needed
 
 ## 🏗️ Project Structure
 
 ```
 letscatchup/
-├── frontend/           # React + TypeScript + Tailwind CSS
-├── backend/            # Node.js + Express + Socket.io
-├── docker-compose.yml  # Development environment
-└── README.md          # This file
+├── backend/                 # Express.js backend
+│   ├── src/
+│   │   ├── index.ts        # Main server file
+│   │   ├── routes/         # API routes
+│   │   │   └── session.ts  # Session management routes
+│   │   ├── sockets/        # Socket.io handlers
+│   │   │   └── sessionSocket.ts # Real-time session events
+│   │   ├── services/       # Business logic
+│   │   │   └── llmService.ts # LLM integration
+│   │   └── types/          # TypeScript types
+│   └── package.json
+├── frontend/               # React frontend
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   │   ├── CreateSession.tsx
+│   │   │   ├── SessionPage.tsx
+│   │   │   ├── JoinSession.tsx
+│   │   │   └── DebugTest.tsx
+│   │   ├── hooks/          # Custom React hooks
+│   │   │   └── useSession.ts
+│   │   ├── services/       # API and Socket services
+│   │   │   ├── apiService.ts
+│   │   │   └── socketService.ts
+│   │   ├── store/          # Zustand state management
+│   │   │   └── sessionStore.ts
+│   │   └── types/          # TypeScript types
+│   └── package.json
+├── docs/                   # Documentation
+└── README.md
 ```
 
-## 🎯 Features
+## 🔧 Development
 
-### Stage 1: Creator Interface
-- Simple landing page with natural language input
-- LLM processing to extract initial categories
-- Shareable link generation
+### Available Scripts
 
-### Stage 2: Friend Onboarding
-- Personalized question flow (max 3-4 questions)
-- Adaptive questions based on creator's input
-- Multiple choice answers
+**Backend:**
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build for production
+- `npm start` - Start production server
 
-### Stage 3: Live Collaborative Arena
-- Real-time visual preference matching
-- Circle-based voting system with color coding
-- Automatic consensus detection
-- Mobile-optimized touch interactions
+**Frontend:**
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
 
-## 🛠️ Development
+### Environment Variables
 
-### Local Development (without Docker)
-```bash
-# Install dependencies
-npm run install:all
-
-# Run frontend and backend separately
-npm run dev:frontend  # Port 3000
-npm run dev:backend   # Port 3001
+**Backend (.env):**
+```env
+PORT=3001
+NODE_ENV=development
+OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-### Testing
-```bash
-npm test
+**Frontend (.env):**
+```env
+VITE_API_URL=http://localhost:3001
 ```
 
-## 📱 Mobile Support
-- Mobile-first responsive design
-- Touch interactions (tap, long press, swipe)
-- Optimized for 2-20 concurrent users
+### Development Features
 
-## 🧠 LLM Integration
-- Local Ollama with Llama 3.2 (3B parameters)
-- Natural language processing for meetup descriptions
-- Intelligent keyword categorization
-- No external API keys required
+- **Hot Reload**: Both frontend and backend support hot reloading
+- **Debug Mode**: Comprehensive logging for development
+- **Debug Route**: `/debug` route for testing Socket.io functionality
+- **TypeScript**: Full type safety across the stack
 
-## 🎨 Tech Stack
-- **Frontend:** React, TypeScript, Tailwind CSS, Vite
-- **Backend:** Node.js, Express, Socket.io
-- **Storage:** In-memory (perfect for MVP/demo)
-- **LLM:** Ollama with Llama 3.2
-- **Development:** Docker Compose
+## 🔍 API Documentation
 
-## 📄 License & Trademark
+### REST Endpoints
 
-This project uses a **dual licensing approach**:
+- `POST /api/session/create` - Create a new session
+- `GET /api/session/current` - Get current session data
+- `POST /api/session/current/join` - Join current session
+- `POST /api/session/current/keywords` - Add keyword to session
+- `POST /api/session/current/vote` - Vote on a keyword
 
-### 🔓 Open Source Code (MIT License)
-The source code is available under the [MIT License](LICENSE). You can:
-- ✅ Use, modify, and distribute the code
-- ✅ Create derivative works
-- ✅ Use for commercial purposes
+### Socket.io Events
 
-### 🛡️ Protected Trademarks
-The following are **NOT** covered by the MIT License:
-- ❌ "letscatchup.ai" name and branding
-- ❌ Visual design concepts and UI patterns
-- ❌ Business methodology and user experience flow
+**Client → Server:**
+- `join-session` - Join a session room
+- `keyword-added` - Broadcast new keyword
+- `vote-updated` - Broadcast vote changes
 
-See [TRADEMARK.md](TRADEMARK.md) for complete details.
+**Server → Client:**
+- `keyword-added` - New keyword added
+- `vote-updated` - Vote count changed
+- `user-joined` - User joined session
 
-### 🤝 Want to Use Our Branding?
-Contact us for licensing opportunities: [your-email@domain.com]
+## 🚀 Deployment
+
+### Backend Deployment
+1. Build the application: `npm run build`
+2. Set environment variables for production
+3. Start with: `npm start`
+
+### Frontend Deployment
+1. Build the application: `npm run build`
+2. Serve the `dist` folder with any static file server
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Socket.io Connection Issues**
+   - Check if backend is running on port 3001
+   - Verify CORS settings
+   - Check browser console for connection errors
+
+2. **LLM Categorization Not Working**
+   - Ensure Ollama is installed and running
+   - Check if `llama3` model is pulled
+   - Verify `OLLAMA_BASE_URL` environment variable
+
+3. **Performance Issues**
+   - Check for infinite loops in browser console
+   - Monitor backend logs for excessive Socket.io events
+   - Use the `/debug` route to test functionality
+
+### Debug Tools
+
+- **Debug Route**: Visit `/debug` for Socket.io testing
+- **Browser Console**: Check for real-time event logs
+- **Backend Logs**: Monitor terminal for detailed event tracking
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built with modern web technologies
+- Inspired by the need for better collaborative planning tools
+- Thanks to the open-source community for amazing tools and libraries
