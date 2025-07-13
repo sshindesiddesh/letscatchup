@@ -7,7 +7,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 
 // Import our modules
-import { sessionRouter } from './routes/session';
+import { sessionRouter, setSocketIO } from './routes/session';
 import { setupSocketHandlers } from './sockets/sessionSocket';
 
 // Load environment variables
@@ -54,6 +54,9 @@ app.get('/api/status', (req, res) => {
 
 // Socket.io connection handling
 setupSocketHandlers(io);
+
+// Pass Socket.io instance to routes for real-time broadcasting
+setSocketIO(io);
 
 // Start server
 server.listen(PORT, () => {

@@ -13,6 +13,12 @@
 import { Router, Request, Response } from 'express';
 import { sessionManager } from '../services/SessionManager';
 import {
+  broadcastSessionUpdate,
+  broadcastKeywordAdded,
+  broadcastVoteUpdate,
+  broadcastSessionStats
+} from '../sockets/sessionSocket';
+import {
   CreateSessionRequest,
   CreateSessionResponse,
   JoinSessionRequest,
@@ -21,7 +27,28 @@ import {
   VoteRequest
 } from '../models/types';
 
+// We'll get the io instance from the main server
+let socketIO: any = null;
+export function setSocketIO(io: any) {
+  socketIO = io;
+}
+
 export const sessionRouter = Router();
+
+/**
+ * Health check for session service
+ * GET /api/session/health
+ */
+sessionRouter.get('/health', (req: Request, res: Response) => {
+  const session = sessionManager.session;
+  return res.status(200).json({
+    status: 'ok',
+    hasActiveSession: !!session,
+    sessionId: session?.id || null,
+    participantCount: session?.participants.size || 0,
+    keywordCount: session?.keywords.size || 0
+  });
+});
 
 /**
  * Create a new planning session
@@ -104,6 +131,12 @@ sessionRouter.post('/:sessionId/join', (req: Request<{ sessionId: string }, Join
       sessionData: sessionManager.serializeSession(session)
     };
 
+    // Broadcast session update to all participants (new user joined)
+    if (socketIO) {
+      broadcastSessionUpdate(sessionId, socketIO);
+      broadcastSessionStats(sessionId, socketIO);
+    }
+
     return res.status(200).json(response);
   } catch (error) {
     console.error('Error joining session:', error);
@@ -166,6 +199,12 @@ sessionRouter.post('/:sessionId/keywords', (req: Request<{ sessionId: string }, 
       });
     }
 
+    // Broadcast new keyword to all participants
+    if (socketIO) {
+      broadcastKeywordAdded(sessionId, keyword.id, socketIO);
+      broadcastSessionStats(sessionId, socketIO);
+    }
+
     return res.status(201).json({
       id: keyword.id,
       text: keyword.text,
@@ -214,6 +253,12 @@ sessionRouter.post('/:sessionId/vote', (req: Request<{ sessionId: string }, {}, 
       });
     }
 
+    // Broadcast vote update to all participants
+    if (socketIO) {
+      broadcastVoteUpdate(sessionId, keywordId, socketIO);
+      broadcastSessionStats(sessionId, socketIO);
+    }
+
     return res.status(200).json({
       keywordId: keyword.id,
       totalScore: keyword.totalScore,
@@ -259,17 +304,4 @@ sessionRouter.get('/:sessionId/participants', (req: Request<{ sessionId: string 
   }
 });
 
-/**
- * Health check for session service
- * GET /api/session/health
- */
-sessionRouter.get('/health', (req: Request, res: Response) => {
-  const session = sessionManager.session;
-  res.status(200).json({
-    status: 'ok',
-    hasActiveSession: !!session,
-    sessionId: session?.id || null,
-    participantCount: session?.participants.size || 0,
-    keywordCount: session?.keywords.size || 0
-  });
-});
+
