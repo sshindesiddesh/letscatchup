@@ -155,13 +155,14 @@ class SocketService {
 
     this.socket.on('vote-updated', (data) => {
       console.log('🗳️ Vote updated:', data.keywordId, 'Score:', data.totalScore);
-      
+
       // Update keyword with new vote data
       const { session } = useSessionStore.getState();
       if (session) {
         const keyword = session.keywords.find(k => k.id === data.keywordId);
         if (keyword) {
           useSessionStore.getState().updateKeyword(data.keywordId, {
+            votes: data.votes,
             totalScore: data.totalScore,
           });
         }

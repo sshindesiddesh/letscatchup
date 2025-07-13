@@ -118,10 +118,7 @@ export function useAddKeyword() {
     setError(null);
 
     try {
-      // Use Socket.io for real-time addition
-      socketService.addKeyword(session.id, user.id, text, category);
-      
-      // Also call API for reliability
+      // Call API - this will trigger Socket.io events automatically
       await apiService.addKeyword(session.id, {
         userId: user.id,
         text,
@@ -157,10 +154,7 @@ export function useVote() {
     setError(null);
 
     try {
-      // Use Socket.io for real-time voting
-      socketService.vote(session.id, user.id, keywordId, value);
-      
-      // Also call API for reliability
+      // Call API - this will trigger Socket.io events automatically
       await apiService.vote(session.id, {
         userId: user.id,
         keywordId,

@@ -9,10 +9,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSession, useUser, useSessionStats } from '../store/sessionStore';
+import { useSession, useUser, useSessionStats, useSessionStore } from '../store/sessionStore';
 import { useAddKeyword, useVote } from '../hooks/useSession';
 import { getCategoryInfo, getAllCategories, suggestCategory } from '../utils/categories';
 import { ConnectionStatus } from './ConnectionStatus';
+import { apiService } from '../services/apiService';
 import type { CategoryType } from '../types';
 
 export function SessionPage() {
@@ -21,25 +22,49 @@ export function SessionPage() {
   const session = useSession();
   const user = useUser();
   const stats = useSessionStats();
-  
+  const { setSession } = useSessionStore();
+
   const { addKeyword, isLoading: isAddingKeyword } = useAddKeyword();
   const { vote, isLoading: isVoting } = useVote();
-  
+
   const [newKeyword, setNewKeyword] = useState({
     text: '',
     category: 'activity' as CategoryType,
   });
-  
+
   const [showAddKeyword, setShowAddKeyword] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+
+  // Fetch session data if not in store
+  useEffect(() => {
+    const fetchSessionData = async () => {
+      if (!session && sessionId && user) {
+        console.log('🔄 Fetching session data for:', sessionId);
+        setIsLoadingSession(true);
+        try {
+          const sessionData = await apiService.getSession(sessionId);
+          console.log('✅ Session data fetched:', sessionData);
+          setSession(sessionData);
+        } catch (error) {
+          console.error('❌ Failed to fetch session data:', error);
+          navigate('/');
+        } finally {
+          setIsLoadingSession(false);
+        }
+      }
+    };
+
+    fetchSessionData();
+  }, [session, sessionId, user, setSession, navigate]);
 
   // Redirect if no session or user
   useEffect(() => {
-    if (!session || !user) {
+    if (!isLoadingSession && (!session || !user)) {
       navigate('/');
     }
-  }, [session, user, navigate]);
+  }, [session, user, navigate, isLoadingSession]);
 
-  if (!session || !user) {
+  if (isLoadingSession || !session || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -49,6 +74,11 @@ export function SessionPage() {
       </div>
     );
   }
+
+  // Debug logging
+  console.log('🎯 SessionPage render - Session:', session);
+  console.log('🎯 SessionPage render - Keywords count:', session.keywords?.length || 0);
+  console.log('🎯 SessionPage render - Keywords:', session.keywords);
 
   const handleAddKeyword = async () => {
     if (!newKeyword.text.trim()) return;
