@@ -45,6 +45,7 @@
     "socket.io",
     "express"
   ],
-  "author": "Your Name",
-  "license": "MIT"
+  "author": "Siddesh Shinde <your-email@domain.com>",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2025 Siddesh Shinde. Trademarks protected separately."
 }

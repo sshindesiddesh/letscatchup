@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "author": "Siddesh Shinde <your-email@domain.com>",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2025 Siddesh Shinde. Trademarks protected separately.",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",

@@ -90,3 +90,24 @@ npm test
 - **Storage:** In-memory (perfect for MVP/demo)
 - **LLM:** Ollama with Llama 3.2
 - **Development:** Docker Compose
+
+## 📄 License & Trademark
+
+This project uses a **dual licensing approach**:
+
+### 🔓 Open Source Code (MIT License)
+The source code is available under the [MIT License](LICENSE). You can:
+- ✅ Use, modify, and distribute the code
+- ✅ Create derivative works
+- ✅ Use for commercial purposes
+
+### 🛡️ Protected Trademarks
+The following are **NOT** covered by the MIT License:
+- ❌ "letscatchup.ai" name and branding
+- ❌ Visual design concepts and UI patterns
+- ❌ Business methodology and user experience flow
+
+See [TRADEMARK.md](TRADEMARK.md) for complete details.
+
+### 🤝 Want to Use Our Branding?
+Contact us for licensing opportunities: [your-email@domain.com]

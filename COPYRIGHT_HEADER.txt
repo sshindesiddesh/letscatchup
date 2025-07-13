@@ -1,0 +1,15 @@
+/**
+ * letscatchup.ai - Collaborative Meeting Planner
+ * 
+ * Copyright (c) 2025 Siddesh Shinde
+ * 
+ * This source code is licensed under the MIT License found in the
+ * LICENSE file in the root directory of this source tree.
+ * 
+ * Trademarks including "letscatchup.ai", visual designs, and business
+ * methodology are protected separately. See TRADEMARK.md for details.
+ * 
+ * @author Siddesh Shinde
+ * @license MIT
+ * @trademark Protected - See TRADEMARK.md
+ */
