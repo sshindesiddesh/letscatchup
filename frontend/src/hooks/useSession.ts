@@ -7,7 +7,7 @@
  * Licensed under the MIT License
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useSessionStore, useUser, useSession, useUIState } from '../store/sessionStore';
 import { apiService } from '../services/apiService';
 import { socketService } from '../services/socketService';
@@ -119,10 +119,22 @@ export function useAddKeyword() {
 
     try {
       // Call API - this will trigger Socket.io events automatically
-      await apiService.addKeyword(session.id, {
+      const response = await apiService.addKeyword(session.id, {
         userId: user.id,
         text,
         category,
+      });
+
+      // Immediately update local state (don't wait for Socket.io)
+      const { addKeyword: addKeywordToStore } = useSessionStore.getState();
+      addKeywordToStore({
+        id: response.id,
+        text: response.text,
+        category: response.category,
+        addedBy: response.addedBy,
+        createdAt: response.createdAt,
+        votes: [],
+        totalScore: 0,
       });
 
     } catch (err) {
@@ -155,10 +167,18 @@ export function useVote() {
 
     try {
       // Call API - this will trigger Socket.io events automatically
-      await apiService.vote(session.id, {
+      const response = await apiService.vote(session.id, {
         userId: user.id,
         keywordId,
         value,
+      });
+
+      // Immediately update local state (don't wait for Socket.io)
+      const { updateKeyword } = useSessionStore.getState();
+      updateKeyword(keywordId, {
+        totalScore: response.totalScore,
+        // Note: We don't update votes array here as it's complex
+        // The Socket.io event will handle the full vote update
       });
 
     } catch (err) {
@@ -205,19 +225,49 @@ export function useSessionConnection() {
   const session = useSession();
   const user = useUser();
   const { isConnected } = useUIState();
+  const hasJoinedRef = useRef<string | null>(null);
 
   // Auto-connect when session and user are available
   useEffect(() => {
-    if (session && user && !isConnected) {
-      socketService.connect();
-      socketService.joinSession(session.id, user.id);
+    if (session && user) {
+      console.log('🔍 useSessionConnection - session and user available');
+      console.log('🔍 isConnected:', isConnected);
+
+      if (!isConnected) {
+        console.log('🔌 Connecting to Socket.io...');
+        socketService.connect();
+      }
     }
   }, [session, user, isConnected]);
+
+  // Join session when connected (only once per session)
+  useEffect(() => {
+    if (session && user && isConnected) {
+      const sessionKey = `${session.id}-${user.id}`;
+
+      // Only join if we haven't already joined this session with this user
+      if (hasJoinedRef.current !== sessionKey) {
+        console.log('🔍 Socket connected, joining session...');
+        console.log('🔍 Session ID:', session.id);
+        console.log('🔍 User ID:', user.id);
+        socketService.joinSession(session.id, user.id);
+        hasJoinedRef.current = sessionKey;
+      }
+    } else {
+      console.log('🔍 Not joining session - session:', !!session, 'user:', !!user, 'isConnected:', isConnected);
+    }
+  }, [session, user, isConnected]);
+
+  // Reset join tracking when session changes
+  useEffect(() => {
+    hasJoinedRef.current = null;
+  }, [session?.id]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       socketService.disconnect();
+      hasJoinedRef.current = null;
     };
   }, []);
 

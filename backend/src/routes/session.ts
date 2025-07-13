@@ -268,9 +268,13 @@ sessionRouter.post('/:sessionId/keywords', (req: Request<{ sessionId: string }, 
     }
 
     // Broadcast new keyword to all participants
+    console.log('🔍 Checking socketIO for broadcast:', socketIO ? 'Available' : 'NULL');
     if (socketIO) {
+      console.log('📡 Calling broadcastKeywordAdded...');
       broadcastKeywordAdded(sessionId, keyword.id, socketIO);
       broadcastSessionStats(sessionId, socketIO);
+    } else {
+      console.log('❌ socketIO is null, cannot broadcast');
     }
 
     return res.status(201).json({

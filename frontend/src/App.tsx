@@ -6,6 +6,7 @@ import SessionTest from './components/SessionTest'
 import CreateSession from './components/CreateSession'
 import SessionPage from './components/SessionPage'
 import JoinSession from './components/JoinSession'
+import { DebugTest } from './components/DebugTest'
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<CreateSession />} />
         <Route path="/test" element={<SessionTest />} />
+        <Route path="/debug" element={<DebugTest />} />
         <Route path="/session/:sessionId" element={<SessionPageWrapper />} />
         <Route path="/join/:sessionId" element={<JoinPageWrapper />} />
         <Route path="/demo" element={<HomePage />} />

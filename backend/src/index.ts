@@ -17,7 +17,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || ["http://localhost:3000", "http://localhost:3002"],
+    origin: process.env.FRONTEND_URL || ["http://localhost:3000", "http://localhost:3002", "http://localhost:3003"],
     methods: ["GET", "POST"]
   }
 });
@@ -27,7 +27,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || ["http://localhost:3000", "http://localhost:3002"]
+  origin: process.env.FRONTEND_URL || ["http://localhost:3000", "http://localhost:3002", "http://localhost:3003"]
 }));
 app.use(morgan('combined'));
 app.use(express.json());

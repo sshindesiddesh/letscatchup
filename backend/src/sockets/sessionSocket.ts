@@ -25,17 +25,23 @@ export function setupSocketHandlers(io: Server) {
 
     // Join a session room for real-time updates
     socket.on('join-session', (data: { sessionId: string; userId: string }) => {
+      console.log(`🔍 Received join-session event:`, data);
       const { sessionId, userId } = data;
 
       // Verify session and user exist
       const session = sessionManager.getSession(sessionId);
+      console.log(`🔍 Session found:`, !!session);
+      console.log(`🔍 User in session:`, session?.participants.has(userId));
+
       if (!session || !session.participants.has(userId)) {
+        console.log(`❌ Invalid session or user - sessionId: ${sessionId}, userId: ${userId}`);
         socket.emit('error', { message: 'Invalid session or user' });
         return;
       }
 
       // Join the session room
       socket.join(sessionId);
+      console.log(`✅ Socket ${socket.id} joined room: ${sessionId}`);
 
       // Update participant with socket ID for tracking
       const participant = session.participants.get(userId);
@@ -194,11 +200,19 @@ export function broadcastSessionUpdate(sessionId: string, io: Server) {
  * Broadcast when a new keyword is added
  */
 export function broadcastKeywordAdded(sessionId: string, keywordId: string, io: Server) {
+  console.log(`📡 Broadcasting keyword-added event for session ${sessionId}, keyword ${keywordId}`);
+
   const session = sessionManager.getSession(sessionId);
-  if (!session) return;
+  if (!session) {
+    console.log(`❌ Session ${sessionId} not found for broadcast`);
+    return;
+  }
 
   const keyword = session.keywords.get(keywordId);
-  if (!keyword) return;
+  if (!keyword) {
+    console.log(`❌ Keyword ${keywordId} not found in session ${sessionId}`);
+    return;
+  }
 
   const keywordData = {
     id: keyword.id,
@@ -214,7 +228,9 @@ export function broadcastKeywordAdded(sessionId: string, keywordId: string, io: 
     createdAt: keyword.createdAt.toISOString()
   };
 
+  console.log(`📡 Emitting keyword-added to room ${sessionId}:`, keywordData);
   io.to(sessionId).emit('keyword-added', keywordData);
+  console.log(`✅ Broadcasted keyword-added event successfully`);
 }
 
 /**

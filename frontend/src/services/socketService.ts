@@ -60,13 +60,17 @@ class SocketService {
 
   // Join session room
   joinSession(sessionId: string, userId: string) {
+    console.log(`🔍 joinSession called - sessionId: ${sessionId}, userId: ${userId}`);
+    console.log(`🔍 Socket connected: ${this.socket?.connected}`);
+    console.log(`🔍 Socket exists: ${!!this.socket}`);
+
     if (!this.socket?.connected) {
-      console.warn('Socket not connected, cannot join session');
+      console.warn('⚠️ Socket not connected, cannot join session');
       return;
     }
 
     this.socket.emit('join-session', { sessionId, userId });
-    console.log(`👋 Joining session: ${sessionId}`);
+    console.log(`👋 Emitted join-session event for session: ${sessionId}`);
   }
 
   // Add keyword via socket
@@ -149,8 +153,8 @@ class SocketService {
 
     // Keyword events
     this.socket.on('keyword-added', (data) => {
-      console.log('💡 New keyword added:', data.keyword.text);
-      useSessionStore.getState().addKeyword(data.keyword);
+      console.log('💡 New keyword added:', data.text);
+      useSessionStore.getState().addKeyword(data);
     });
 
     this.socket.on('vote-updated', (data) => {

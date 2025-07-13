@@ -10,7 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSession, useUser, useSessionStats, useSessionStore } from '../store/sessionStore';
-import { useAddKeyword, useVote } from '../hooks/useSession';
+import { useAddKeyword, useVote, useSessionConnection } from '../hooks/useSession';
 import { getCategoryInfo, getAllCategories, suggestCategory } from '../utils/categories';
 import { ConnectionStatus } from './ConnectionStatus';
 import { apiService } from '../services/apiService';
@@ -26,6 +26,9 @@ export function SessionPage() {
 
   const { addKeyword, isLoading: isAddingKeyword } = useAddKeyword();
   const { vote, isLoading: isVoting } = useVote();
+
+  // Establish Socket.io connection for real-time updates
+  const { isConnected } = useSessionConnection();
 
   const [newKeyword, setNewKeyword] = useState({
     text: '',
@@ -44,6 +47,15 @@ export function SessionPage() {
         try {
           const sessionData = await apiService.getSession(sessionId);
           console.log('✅ Session data fetched:', sessionData);
+
+          // Check if user is a participant in the session
+          const isParticipant = sessionData.participants.some(p => p.id === user.id);
+          if (!isParticipant) {
+            console.log('🚫 User is not a participant, redirecting to join page');
+            navigate(`/join/${sessionId}`);
+            return;
+          }
+
           setSession(sessionData);
         } catch (error) {
           console.error('❌ Failed to fetch session data:', error);
@@ -57,8 +69,18 @@ export function SessionPage() {
     fetchSessionData();
   }, [session, sessionId, user, setSession, navigate]);
 
-  // Redirect if no session or user
+  // Check if user is participant and redirect if needed
   useEffect(() => {
+    if (!isLoadingSession && session && user) {
+      const isParticipant = session.participants.some(p => p.id === user.id);
+      if (!isParticipant) {
+        console.log('🚫 User is not a participant, redirecting to join page');
+        navigate(`/join/${session.id}`);
+        return;
+      }
+    }
+
+    // Redirect if no session or user
     if (!isLoadingSession && (!session || !user)) {
       navigate('/');
     }
