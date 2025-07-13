@@ -11,6 +11,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { llmService } from './LLMService';
 import {
   PlanningSession,
   Participant,
@@ -77,6 +78,41 @@ export class SessionManager {
   }
 
   /**
+   * Create a session with LLM analysis of the description
+   */
+  async createSessionWithLLM(description: string, creatorName: string): Promise<{
+    sessionId: string;
+    userId: string;
+    analysis: {
+      suggestedCategories: CategoryType[];
+      context: string;
+      keywords: string[];
+    }
+  }> {
+    // Create the session first
+    const result = this.createSession(description, creatorName);
+
+    // Analyze the description with LLM
+    let analysis;
+    try {
+      analysis = await llmService.analyzeMeetupDescription(description);
+      console.log(`🤖 LLM analyzed description: ${analysis.suggestedCategories.join(', ')}`);
+    } catch (error) {
+      console.log(`⚠️ LLM analysis failed, using defaults`);
+      analysis = {
+        suggestedCategories: ['activity'] as CategoryType[],
+        context: 'General meetup planning',
+        keywords: []
+      };
+    }
+
+    return {
+      ...result,
+      analysis
+    };
+  }
+
+  /**
    * Join an existing session
    */
   joinSession(sessionId: string, name: string): { userId: string; success: boolean } {
@@ -140,8 +176,44 @@ export class SessionManager {
 
     const participant = this.currentSession.participants.get(userId);
     console.log(`💡 ${participant?.name} added keyword: "${text}" (${category})`);
-    
+
     return keyword;
+  }
+
+  /**
+   * Add a keyword with intelligent LLM categorization
+   */
+  async addKeywordWithLLM(sessionId: string, userId: string, text: string, suggestedCategory?: CategoryType): Promise<Keyword | null> {
+    if (!this.currentSession || this.currentSession.id !== sessionId) {
+      return null;
+    }
+
+    if (!this.currentSession.participants.has(userId)) {
+      return null;
+    }
+
+    // Use LLM to categorize the keyword
+    let category: CategoryType;
+    try {
+      const llmResponse = await llmService.categorizeKeyword(text);
+      category = llmResponse.category;
+
+      const participant = this.currentSession.participants.get(userId);
+      console.log(`🤖 LLM categorized "${text}" as "${category}" (confidence: ${llmResponse.confidence})`);
+
+      // If user provided a suggestion and LLM confidence is low, use user suggestion
+      if (suggestedCategory && llmResponse.confidence < 0.7) {
+        category = suggestedCategory;
+        console.log(`👤 Using user suggestion "${suggestedCategory}" over LLM due to low confidence`);
+      }
+    } catch (error) {
+      // Fallback to suggested category or default
+      category = suggestedCategory || 'activity';
+      console.log(`⚠️ LLM categorization failed, using fallback: ${category}`);
+    }
+
+    // Create the keyword using the regular method
+    return this.addKeyword(sessionId, userId, text, category);
   }
 
   /**

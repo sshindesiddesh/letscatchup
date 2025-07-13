@@ -12,6 +12,7 @@
 
 import { Router, Request, Response } from 'express';
 import { sessionManager } from '../services/SessionManager';
+import { llmService } from '../services/LLMService';
 import {
   broadcastSessionUpdate,
   broadcastKeywordAdded,
@@ -47,6 +48,26 @@ sessionRouter.get('/health', (req: Request, res: Response) => {
     sessionId: session?.id || null,
     participantCount: session?.participants.size || 0,
     keywordCount: session?.keywords.size || 0
+  });
+});
+
+/**
+ * Get LLM service information
+ * GET /api/session/llm-info
+ */
+sessionRouter.get('/llm-info', (req: Request, res: Response) => {
+  const modelInfo = llmService.getModelInfo();
+  return res.status(200).json({
+    llm: {
+      available: modelInfo.available,
+      model: modelInfo.name,
+      status: modelInfo.available ? 'ready' : 'unavailable'
+    },
+    features: {
+      smartCategorization: modelInfo.available,
+      descriptionAnalysis: modelInfo.available,
+      fallbackCategorization: true
+    }
   });
 });
 
@@ -93,6 +114,53 @@ sessionRouter.post('/create', (req: Request<{}, CreateSessionResponse, CreateSes
     return res.status(500).json({
       error: 'Failed to create session'
     } as any);
+  }
+});
+
+/**
+ * Create a new planning session with LLM analysis
+ * POST /api/session/create-smart
+ */
+sessionRouter.post('/create-smart', async (req: Request<{}, any, CreateSessionRequest>, res: Response) => {
+  try {
+    const { description, creatorName } = req.body;
+
+    if (!description || !creatorName) {
+      return res.status(400).json({
+        error: 'Description and creator name are required'
+      });
+    }
+
+    if (description.trim().length < 3) {
+      return res.status(400).json({
+        error: 'Description must be at least 3 characters'
+      });
+    }
+
+    if (creatorName.trim().length < 1) {
+      return res.status(400).json({
+        error: 'Creator name is required'
+      });
+    }
+
+    const result = await sessionManager.createSessionWithLLM(
+      description.trim(),
+      creatorName.trim()
+    );
+
+    const response = {
+      sessionId: result.sessionId,
+      shareLink: `/join/${result.sessionId}`,
+      userId: result.userId,
+      analysis: result.analysis
+    };
+
+    return res.status(201).json(response);
+  } catch (error) {
+    console.error('Error creating smart session:', error);
+    return res.status(500).json({
+      error: 'Failed to create session'
+    });
   }
 });
 
@@ -214,6 +282,62 @@ sessionRouter.post('/:sessionId/keywords', (req: Request<{ sessionId: string }, 
     });
   } catch (error) {
     console.error('Error adding keyword:', error);
+    return res.status(500).json({
+      error: 'Failed to add keyword'
+    });
+  }
+});
+
+/**
+ * Add a keyword with intelligent LLM categorization
+ * POST /api/session/:sessionId/keywords-smart
+ */
+sessionRouter.post('/:sessionId/keywords-smart', async (req: Request<{ sessionId: string }, {}, { userId: string; text: string; suggestedCategory?: string }>, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const { userId, text, suggestedCategory } = req.body;
+
+    if (!userId || !text) {
+      return res.status(400).json({
+        error: 'UserId and text are required'
+      });
+    }
+
+    if (suggestedCategory && !['time', 'location', 'food', 'activity'].includes(suggestedCategory)) {
+      return res.status(400).json({
+        error: 'Suggested category must be one of: time, location, food, activity'
+      });
+    }
+
+    const keyword = await sessionManager.addKeywordWithLLM(
+      sessionId,
+      userId,
+      text.trim(),
+      suggestedCategory as any
+    );
+
+    if (!keyword) {
+      return res.status(400).json({
+        error: 'Failed to add keyword. Check session and user ID.'
+      });
+    }
+
+    // Broadcast new keyword to all participants
+    if (socketIO) {
+      broadcastKeywordAdded(sessionId, keyword.id, socketIO);
+      broadcastSessionStats(sessionId, socketIO);
+    }
+
+    return res.status(201).json({
+      id: keyword.id,
+      text: keyword.text,
+      category: keyword.category,
+      addedBy: keyword.addedBy,
+      createdAt: keyword.createdAt.toISOString(),
+      llmCategorized: true
+    });
+  } catch (error) {
+    console.error('Error adding smart keyword:', error);
     return res.status(500).json({
       error: 'Failed to add keyword'
     });
