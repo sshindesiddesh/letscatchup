@@ -32,6 +32,7 @@ import {
   KeywordData,
   VoteData
 } from '../models/types';
+import { validateTag, normalizeTag } from '../utils/tagValidation';
 
 export class SessionManager {
   private currentSession: PlanningSession | null = null;
@@ -267,7 +268,7 @@ export class SessionManager {
   }
 
   /**
-   * Add a keyword to the session
+   * Add a keyword to the session (with deduplication and validation)
    */
   addKeyword(sessionId: string, userId: string, text: string, category: CategoryType): Keyword | null {
     if (!this.currentSession || this.currentSession.id !== sessionId) {
@@ -278,10 +279,44 @@ export class SessionManager {
       return null;
     }
 
+    // Validate and normalize tag format
+    const validation = validateTag(text);
+    if (!validation.isValid) {
+      console.log(`❌ Invalid tag format: "${text}" - ${validation.error}`);
+      return null;
+    }
+
+    const normalizedText = normalizeTag(text);
+
+    // Check for existing keyword with same normalized text
+    const existingKeyword = Array.from(this.currentSession.keywords.values())
+      .find(k => normalizeTag(k.text) === normalizedText);
+
+    if (existingKeyword) {
+      // Add a vote from this user to the existing keyword instead of creating duplicate
+      const vote: Vote = {
+        userId,
+        value: 1, // Default positive vote when adding duplicate
+        timestamp: new Date()
+      };
+
+      existingKeyword.votes.set(userId, vote);
+
+      // Recalculate total score
+      existingKeyword.totalScore = Array.from(existingKeyword.votes.values())
+        .reduce((sum, v) => sum + v.value, 0);
+
+      const participant = this.currentSession.participants.get(userId);
+      console.log(`🔄 ${participant?.name} added vote to existing tag: "${existingKeyword.text}"`);
+
+      return existingKeyword;
+    }
+
+    // Create new keyword if no duplicate found
     const keywordId = this.generateKeywordId();
     const keyword: Keyword = {
       id: keywordId,
-      text: text.trim(),
+      text: normalizedText, // Use normalized text
       category,
       votes: new Map(),
       totalScore: 0,
@@ -293,7 +328,7 @@ export class SessionManager {
     this.currentSession.consensus.pending.push(keywordId);
 
     const participant = this.currentSession.participants.get(userId);
-    console.log(`💡 ${participant?.name} added keyword: "${text}" (${category})`);
+    console.log(`💡 ${participant?.name} added tag: "${normalizedText}" (${category})`);
 
     return keyword;
   }

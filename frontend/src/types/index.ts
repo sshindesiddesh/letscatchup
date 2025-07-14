@@ -111,7 +111,7 @@ export interface ServerToClientEvents {
   'participant-offline': (data: { userId: string; name: string }) => void;
   'participant-count-updated': (data: { total: number; online: number; timestamp: string }) => void;
   'keyword-added': (data: { keywordId: string; keyword: KeywordData; timestamp: string }) => void;
-  'vote-updated': (data: { keywordId: string; totalScore: number; voteCount: number; timestamp: string }) => void;
+  'vote-updated': (data: { keywordId: string; totalScore: number; votes: VoteData[] }) => void;
   'consensus-reached': (data: { keywordIds: string[]; keywords: any[]; timestamp: string }) => void;
   'session-stats-updated': (data: { stats: any; timestamp: string }) => void;
   'user-typing': (data: { userId: string; isTyping: boolean; timestamp: string }) => void;

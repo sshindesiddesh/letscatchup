@@ -12,6 +12,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSession, useUser, useSessionStats, useSessionStore } from '../store/sessionStore';
 import { useAddKeyword, useVote, useSessionConnection, useDeleteSession } from '../hooks/useSession';
 import { getCategoryInfo, getAllCategories, suggestCategory } from '../utils/categories';
+import { validateTag, normalizeTag, getTagErrorMessage } from '../utils/tagValidation';
 import { ConnectionStatus } from './ConnectionStatus';
 import { apiService } from '../services/apiService';
 import type { CategoryType } from '../types';
@@ -35,7 +36,7 @@ export function SessionPage() {
     text: '',
     category: 'activity' as CategoryType,
   });
-
+  const [validationError, setValidationError] = useState<string>('');
 
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -107,9 +108,18 @@ export function SessionPage() {
   const handleAddKeyword = async () => {
     if (!newKeyword.text.trim()) return;
 
+    // Validate before sending
+    const validation = validateTag(newKeyword.text);
+    if (!validation.isValid) {
+      setValidationError(getTagErrorMessage(validation));
+      return;
+    }
+
     try {
-      await addKeyword(newKeyword.text.trim(), newKeyword.category);
+      const normalizedText = normalizeTag(newKeyword.text);
+      await addKeyword(normalizedText, newKeyword.category);
       setNewKeyword({ text: '', category: 'activity' });
+      setValidationError('');
     } catch (error) {
       console.error('Failed to add keyword:', error);
     }
@@ -131,6 +141,14 @@ export function SessionPage() {
       text,
       category: suggestedCategory,
     });
+
+    // Validate tag format in real-time
+    if (text.trim()) {
+      const validation = validateTag(text);
+      setValidationError(validation.isValid ? '' : getTagErrorMessage(validation));
+    } else {
+      setValidationError('');
+    }
   };
 
   const shareLink = `${window.location.origin}/join/${sessionId}`;
@@ -225,17 +243,27 @@ export function SessionPage() {
               type="text"
               value={newKeyword.text}
               onChange={(e) => handleKeywordTextChange(e.target.value)}
-              placeholder="Type your message or idea..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
+              placeholder="Type your tag (e.g., coffee, saturday-morning, central-park)..."
+              className={`flex-1 px-4 py-3 border rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                validationError ? 'border-red-300' : 'border-gray-300'
+              }`}
+              onKeyPress={(e) => e.key === 'Enter' && !validationError && handleAddKeyword()}
             />
             <button
               onClick={handleAddKeyword}
-              disabled={isAddingKeyword || !newKeyword.text.trim()}
+              disabled={isAddingKeyword || !newKeyword.text.trim() || !!validationError}
               className="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isAddingKeyword ? '...' : 'Send'}
             </button>
+          </div>
+          {validationError && (
+            <div className="mt-2 text-sm text-red-600 px-4">
+              {validationError}
+            </div>
+          )}
+          <div className="mt-2 text-xs text-gray-500 px-4">
+            Tags: letters only, max 2 hyphens (e.g., coffee, saturday-morning, central-park-meetup)
           </div>
         </div>
 

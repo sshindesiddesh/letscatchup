@@ -182,18 +182,18 @@ class SocketService {
     });
 
     this.socket.on('vote-updated', (data) => {
-      console.log('🗳️ Vote updated:', data.keywordId, 'Score:', data.totalScore);
+      console.log('🗳️ Vote updated:', data.keywordId, 'Score:', data.totalScore, 'Votes:', data.votes);
 
-      // Update keyword with new vote data
+      // Update keyword with new vote data including votes array
       const { session } = useSessionStore.getState();
       if (session) {
         const keyword = session.keywords.find(k => k.id === data.keywordId);
         if (keyword) {
           useSessionStore.getState().updateKeyword(data.keywordId, {
             totalScore: data.totalScore,
-            // Note: votes array update would need to be handled differently
-            // For now, just update the score
+            votes: data.votes, // Update the full votes array
           });
+          console.log('✅ Updated keyword votes in store');
         }
       }
     });
