@@ -219,7 +219,7 @@ export function JoinSession() {
 
           {/* How it works section */}
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 sm:mb-8">What happens next?</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 sm:mb-8">How it works</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
               <div className="text-center">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
