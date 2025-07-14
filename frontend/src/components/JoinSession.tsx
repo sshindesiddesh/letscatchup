@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useJoinSession, useAddKeyword } from '../hooks/useSession';
+import { useJoinSession, useRejoinSession, useAddKeyword } from '../hooks/useSession';
 import { useSessionStore } from '../store/sessionStore';
 import { apiService } from '../services/apiService';
 import OnboardingFlow, { OnboardingResponses } from './OnboardingFlow';
@@ -19,6 +19,7 @@ export function JoinSession() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { joinSession, isLoading, error } = useJoinSession();
+  const { rejoinSession, isLoading: isRejoining, error: rejoinError } = useRejoinSession();
   const { addKeyword } = useAddKeyword();
   const { setOnboardingResponse } = useSessionStore();
 
@@ -26,6 +27,8 @@ export function JoinSession() {
   const [loadingSession, setLoadingSession] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [userCode, setUserCode] = useState('');
+  const [joinMode, setJoinMode] = useState<'new' | 'rejoin'>('new');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingResponses, setOnboardingResponses] = useState<OnboardingResponses | null>(null);
 
@@ -62,6 +65,23 @@ export function JoinSession() {
       setShowOnboarding(true);
     } catch (err) {
       console.error('Failed to join session:', err);
+    }
+  };
+
+  const handleRejoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!userCode.trim() || userCode.trim().length !== 3) {
+      return;
+    }
+
+    try {
+      await rejoinSession(userCode.trim());
+
+      // Navigate directly to session (no onboarding for returning users)
+      navigate(`/session/${sessionId}`);
+    } catch (err) {
+      console.error('Failed to rejoin session:', err);
     }
   };
 
@@ -268,46 +288,124 @@ export function JoinSession() {
           </div>
         )}
 
-        {/* Join Form */}
+        {/* Join Mode Selection */}
         <div className="card">
-          <form onSubmit={handleJoin} className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                What should we call you?
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                className="input-field"
-                required
-                autoFocus
-              />
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">How would you like to join?</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setJoinMode('new')}
+                className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                  joinMode === 'new'
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-medium text-gray-900">👋 New Participant</div>
+                <div className="text-sm text-gray-600 mt-1">Join for the first time</div>
+              </button>
+              <button
+                onClick={() => setJoinMode('rejoin')}
+                className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                  joinMode === 'rejoin'
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-medium text-gray-900">🔄 Returning User</div>
+                <div className="text-sm text-gray-600 mt-1">I have a 3-digit code</div>
+              </button>
             </div>
+          </div>
 
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{error}</p>
+          {/* New User Form */}
+          {joinMode === 'new' && (
+            <form onSubmit={handleJoin} className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  What should we call you?
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="input-field"
+                  required
+                  autoFocus
+                />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={isLoading || !name.trim()}
-              className="btn-primary w-full text-lg py-3"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Joining session...
-                </span>
-              ) : (
-                'Join Planning Session'
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
               )}
-            </button>
-          </form>
+
+              <button
+                type="submit"
+                disabled={isLoading || !name.trim()}
+                className="btn-primary w-full text-lg py-3"
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Joining session...
+                  </span>
+                ) : (
+                  'Join Planning Session'
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Rejoin Form */}
+          {joinMode === 'rejoin' && (
+            <form onSubmit={handleRejoin} className="space-y-6">
+              <div>
+                <label htmlFor="userCode" className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter your 3-digit code
+                </label>
+                <input
+                  id="userCode"
+                  type="text"
+                  value={userCode}
+                  onChange={(e) => setUserCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                  placeholder="123"
+                  className="input-field text-center text-2xl font-mono tracking-widest"
+                  maxLength={3}
+                  pattern="[0-9]{3}"
+                  required
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This is the 3-digit code you received when you first joined
+                </p>
+              </div>
+
+              {rejoinError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{rejoinError}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isRejoining || userCode.length !== 3}
+                className="btn-primary w-full text-lg py-3"
+              >
+                {isRejoining ? (
+                  <span className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Rejoining session...
+                  </span>
+                ) : (
+                  'Rejoin Session'
+                )}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* What Happens Next */}

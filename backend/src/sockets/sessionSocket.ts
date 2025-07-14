@@ -113,8 +113,8 @@ export function setupSocketHandlers(io: Server) {
       }
 
       // Submit vote using session manager
-      const success = sessionManager.vote(sessionId, userId, keywordId, value);
-      if (success) {
+      const result = sessionManager.vote(sessionId, userId, keywordId, value);
+      if (result.success) {
         // Broadcast vote update to all participants
         broadcastVoteUpdate(sessionId, keywordId, io);
 
@@ -129,7 +129,7 @@ export function setupSocketHandlers(io: Server) {
 
         console.log(`📡 Broadcasted vote update for keyword ${keywordId} in session ${sessionId}`);
       } else {
-        socket.emit('error', { message: 'Failed to submit vote' });
+        socket.emit('error', { message: result.error || 'Failed to submit vote' });
       }
     });
 
@@ -341,4 +341,28 @@ export function broadcastSystemMessage(message: string, io: Server) {
     message,
     timestamp: new Date().toISOString()
   });
+}
+
+/**
+ * Broadcast name conflict notification
+ */
+export function broadcastNameConflict(sessionId: string, name: string, conflictingUserCode: string, io: Server) {
+  io.to(sessionId).emit('name-conflict', {
+    name,
+    conflictingUserCode
+  });
+
+  console.log(`⚠️ Broadcasted name conflict for "${name}" (conflicts with user ${conflictingUserCode}) in session ${sessionId}`);
+}
+
+/**
+ * Broadcast session deletion notification
+ */
+export function broadcastSessionDeleted(sessionId: string, adminName: string, io: Server) {
+  io.to(sessionId).emit('session-deleted', {
+    message: 'Session has been deleted by the admin',
+    adminName
+  });
+
+  console.log(`🗑️ Broadcasted session deletion by ${adminName} to session ${sessionId}`);
 }

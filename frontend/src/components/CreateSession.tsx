@@ -9,20 +9,23 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateSession } from '../hooks/useSession';
+import { useCreateSession, useRejoinSession } from '../hooks/useSession';
 import { getCategoryInfo, getAllCategories } from '../utils/categories';
 import type { CategoryType } from '../types';
 
 export function CreateSession() {
   const navigate = useNavigate();
   const { createSession, isLoading, error } = useCreateSession();
-  
+  const { rejoinSession, isLoading: isRejoining, error: rejoinError } = useRejoinSession();
+
   const [formData, setFormData] = useState({
     description: '',
     creatorName: '',
   });
-  
+
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [mode, setMode] = useState<'create' | 'rejoin'>('create');
+  const [userCode, setUserCode] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +49,23 @@ export function CreateSession() {
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleRejoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!userCode.trim() || userCode.trim().length !== 3) {
+      return;
+    }
+
+    try {
+      await rejoinSession(userCode.trim());
+
+      // Navigate to the session page
+      navigate('/session/current');
+    } catch (err) {
+      console.error('Failed to rejoin session:', err);
+    }
   };
 
   const exampleDescriptions = [
@@ -102,9 +122,42 @@ export function CreateSession() {
           </div>
         </div>
 
-        {/* Create Session Form */}
-        <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <>
+          {/* Mode Selection */}
+          <div className="card mb-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">What would you like to do?</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setMode('create')}
+                  className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                    mode === 'create'
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-medium text-gray-900">🚀 Create New Session</div>
+                  <div className="text-sm text-gray-600 mt-1">Start a new meetup planning session</div>
+                </button>
+                <button
+                  onClick={() => setMode('rejoin')}
+                  className={`p-4 border-2 rounded-lg text-left transition-colors ${
+                    mode === 'rejoin'
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-medium text-gray-900">🔄 Rejoin Session</div>
+                  <div className="text-sm text-gray-600 mt-1">I have a 3-digit code</div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Create Session Form */}
+          {mode === 'create' && (
+            <div className="card">
+              <form onSubmit={handleSubmit} className="space-y-6">
             {/* Description Field */}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
@@ -203,7 +256,58 @@ export function CreateSession() {
               )}
             </button>
           </form>
-        </div>
+          </div>
+        )}
+
+        {/* Rejoin Session Form */}
+        {mode === 'rejoin' && (
+          <div className="card">
+            <form onSubmit={handleRejoin} className="space-y-6">
+              <div>
+                <label htmlFor="userCode" className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter your 3-digit code
+                </label>
+                <input
+                  id="userCode"
+                  type="text"
+                  value={userCode}
+                  onChange={(e) => setUserCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                  placeholder="123"
+                  className="input-field text-center text-2xl font-mono tracking-widest"
+                  maxLength={3}
+                  pattern="[0-9]{3}"
+                  required
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This is the 3-digit code you received when you first created or joined a session
+                </p>
+              </div>
+
+              {rejoinError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{rejoinError}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isRejoining || userCode.length !== 3}
+                className="btn-primary w-full text-lg py-3"
+              >
+                {isRejoining ? (
+                  <span className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Rejoining session...
+                  </span>
+                ) : (
+                  'Rejoin Session'
+                )}
+              </button>
+            </form>
+          </div>
+        )}
+        </>
 
         {/* How It Works */}
         <div className="mt-12 text-center">

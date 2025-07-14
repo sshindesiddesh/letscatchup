@@ -37,7 +37,9 @@ export function useCreateSession() {
       setUser({
         id: response.userId,
         name: data.creatorName,
+        userCode: response.userCode,
         isCreator: true,
+        isAdmin: true, // Creator is admin
       });
 
       // Get full session data
@@ -78,7 +80,9 @@ export function useJoinSession() {
       setUser({
         id: response.userId,
         name: data.name,
+        userCode: response.userCode,
         isCreator: false,
+        isAdmin: false, // Joiners are not admin by default
       });
 
       // Set session data
@@ -130,7 +134,7 @@ export function useAddKeyword() {
       addKeywordToStore({
         id: response.id,
         text: response.text,
-        category: response.category,
+        category: response.category as CategoryType,
         addedBy: response.addedBy,
         createdAt: response.createdAt,
         votes: [],
@@ -263,15 +267,96 @@ export function useSessionConnection() {
     hasJoinedRef.current = null;
   }, [session?.id]);
 
-  // Cleanup on unmount
+  // Reset join tracking on unmount (but don't disconnect - let other components use the connection)
   useEffect(() => {
     return () => {
-      socketService.disconnect();
       hasJoinedRef.current = null;
     };
   }, []);
 
   return { isConnected };
+}
+
+// Hook for deleting sessions (admin only)
+export function useDeleteSession() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const session = useSession();
+  const user = useUser();
+  const { reset } = useSessionStore();
+
+  const deleteSession = useCallback(async () => {
+    if (!session || !user) {
+      setError('Session or user not found');
+      return;
+    }
+
+    if (!user.isAdmin) {
+      setError('Only the session admin can delete the session');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await apiService.deleteCurrentSession({
+        userId: user.id,
+      });
+
+      // Clear local state
+      reset();
+
+      console.log('🗑️ Session deleted successfully');
+    } catch (err) {
+      const error = err as ApiError;
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session, user, reset]);
+
+  return { deleteSession, isLoading, error, canDelete: user?.isAdmin || false };
+}
+
+// Hook for rejoining sessions with user code
+export function useRejoinSession() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { setSession, setUser } = useSessionStore();
+
+  const rejoinSession = useCallback(async (userCode: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiService.rejoinCurrentSession({ userCode });
+
+      // Set session data
+      setSession(response.sessionData);
+
+      // Set user data
+      setUser({
+        id: response.userId,
+        name: response.userData.name,
+        userCode: response.userCode,
+        isCreator: response.userData.isCreator,
+        isAdmin: response.userData.isAdmin,
+      });
+
+      console.log(`🔄 Successfully rejoined session with code ${userCode}`);
+      return response;
+    } catch (err) {
+      const error = err as ApiError;
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setSession, setUser]);
+
+  return { rejoinSession, isLoading, error };
 }
 
 // Hook for session health check

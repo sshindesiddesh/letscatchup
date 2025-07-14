@@ -14,6 +14,8 @@ import type {
   JoinSessionResponse,
   AddKeywordRequest,
   VoteRequest,
+  DeleteSessionRequest,
+  DeleteSessionResponse,
   SessionData,
   ParticipantData,
   ApiError,
@@ -128,6 +130,93 @@ class ApiService {
   // Get session participants
   async getParticipants(sessionId: string): Promise<{ participants: ParticipantData[] }> {
     return this.request<{ participants: ParticipantData[] }>(`/session/${sessionId}/participants`);
+  }
+
+  // === Current Session API (MVP: Single Session) ===
+
+  // Get current session data
+  async getCurrentSession(): Promise<SessionData> {
+    return this.request<SessionData>('/session/current');
+  }
+
+  // Join current session
+  async joinCurrentSession(data: JoinSessionRequest): Promise<JoinSessionResponse> {
+    return this.request<JoinSessionResponse>('/session/current/join', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Rejoin current session with user code
+  async rejoinCurrentSession(data: { userCode: string }): Promise<{
+    userId: string;
+    userCode: string;
+    userData: {
+      name: string;
+      isCreator: boolean;
+      isAdmin: boolean;
+    };
+    sessionData: SessionData;
+  }> {
+    return this.request<{
+      userId: string;
+      userCode: string;
+      userData: {
+        name: string;
+        isCreator: boolean;
+        isAdmin: boolean;
+      };
+      sessionData: SessionData;
+    }>('/session/current/rejoin', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Add keyword to current session
+  async addKeywordToCurrent(data: AddKeywordRequest) {
+    return this.request<{
+      id: string;
+      text: string;
+      category: string;
+      addedBy: string;
+      createdAt: string;
+    }>('/session/current/keywords', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Vote on keyword in current session
+  async voteInCurrent(data: VoteRequest) {
+    return this.request<{
+      keywordId: string;
+      totalScore: number;
+      votes: Array<{
+        userId: string;
+        value: number;
+        timestamp: string;
+      }>;
+    }>('/session/current/vote', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Delete current session (admin only)
+  async deleteCurrentSession(data: DeleteSessionRequest): Promise<DeleteSessionResponse> {
+    return this.request<DeleteSessionResponse>('/session/current', {
+      method: 'DELETE',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Delete session (admin only)
+  async deleteSession(sessionId: string, data: DeleteSessionRequest): Promise<DeleteSessionResponse> {
+    return this.request<DeleteSessionResponse>(`/session/${sessionId}`, {
+      method: 'DELETE',
+      body: JSON.stringify(data),
+    });
   }
 }
 

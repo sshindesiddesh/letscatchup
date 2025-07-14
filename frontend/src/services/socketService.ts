@@ -28,19 +28,32 @@ class SocketService {
 
   // Connect to Socket.io server
   connect() {
-    if (this.socket?.connected) return;
+    if (this.socket?.connected) {
+      console.log('🔌 Already connected to Socket.io server');
+      return;
+    }
+
+    if (this.socket && !this.socket.connected) {
+      console.log('🔌 Reconnecting existing socket...');
+      this.socket.connect();
+      return;
+    }
 
     const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    
+
+    console.log('🔌 Creating new Socket.io connection to:', serverUrl);
     this.socket = io(serverUrl, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
-      forceNew: true,
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
     });
 
     this.setupSocketEventListeners();
-    
-    console.log('🔌 Connecting to Socket.io server...');
+
+    console.log('🔌 Socket.io connection initiated...');
   }
 
   // Disconnect from server
@@ -152,9 +165,20 @@ class SocketService {
     });
 
     // Keyword events
-    this.socket.on('keyword-added', (data) => {
-      console.log('💡 New keyword added:', data.text);
-      useSessionStore.getState().addKeyword(data);
+    this.socket.on('keyword-added', (keywordData: any) => {
+      console.log('💡 New keyword added via Socket.io:', keywordData.text);
+      console.log('🔍 Full keyword data:', keywordData);
+
+      // Get current user to avoid duplicate additions
+      const currentUser = useSessionStore.getState().user;
+
+      // Only add if it's not from the current user (to prevent duplicates)
+      if (!currentUser || keywordData.addedBy !== currentUser.id) {
+        console.log('✅ Adding keyword from other user');
+        useSessionStore.getState().addKeyword(keywordData);
+      } else {
+        console.log('🚫 Ignoring own keyword to prevent duplicate');
+      }
     });
 
     this.socket.on('vote-updated', (data) => {
@@ -166,8 +190,9 @@ class SocketService {
         const keyword = session.keywords.find(k => k.id === data.keywordId);
         if (keyword) {
           useSessionStore.getState().updateKeyword(data.keywordId, {
-            votes: data.votes,
             totalScore: data.totalScore,
+            // Note: votes array update would need to be handled differently
+            // For now, just update the score
           });
         }
       }
@@ -183,10 +208,36 @@ class SocketService {
       // Could update UI with session statistics
     });
 
+    // Session management events
+    this.socket.on('session-deleted', (data) => {
+      console.log('🗑️ Session deleted by admin:', data.adminName);
+
+      // Show notification to user
+      alert(`Session has been deleted by ${data.adminName}`);
+
+      // Clear session data and redirect to home
+      useSessionStore.getState().reset();
+
+      // Redirect to home page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+    });
+
+    this.socket.on('name-conflict', (data) => {
+      console.log('⚠️ Name conflict detected:', data.name, 'conflicts with user code:', data.conflictingUserCode);
+
+      // Show notification about name conflict
+      useSessionStore.getState().setError(
+        `Name "${data.name}" is already taken by user ${data.conflictingUserCode}. Please choose a different name.`
+      );
+    });
+
     // Typing indicators
     this.socket.on('user-typing', (data) => {
-      const { typingUsers, setTypingUsers } = useSessionStore.getState().ui;
-      
+      const { ui, setTypingUsers } = useSessionStore.getState();
+      const { typingUsers } = ui;
+
       if (data.isTyping) {
         // Add user to typing list
         if (!typingUsers.includes(data.userId)) {

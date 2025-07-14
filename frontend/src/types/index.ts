@@ -13,6 +13,8 @@ export type SessionStatus = 'active' | 'completed' | 'expired';
 // API Data Transfer Objects
 export interface SessionData {
   id: string;
+  creator: string;
+  adminUserId: string; // Current admin user ID
   description: string;
   participants: ParticipantData[];
   keywords: KeywordData[];
@@ -28,8 +30,10 @@ export interface SessionData {
 export interface ParticipantData {
   id: string;
   name: string;
+  userCode: string; // 3-digit identification code
   joinedAt: string;
   isCreator: boolean;
+  isAdmin: boolean; // Admin rights
 }
 
 export interface KeywordData {
@@ -75,11 +79,22 @@ export interface CreateSessionResponse {
   sessionId: string;
   shareLink: string;
   userId: string;
+  userCode: string; // 3-digit code for the creator
 }
 
 export interface JoinSessionResponse {
   userId: string;
+  userCode: string; // 3-digit code for the new participant
   sessionData: SessionData;
+}
+
+export interface DeleteSessionRequest {
+  userId: string; // Must be admin to delete
+}
+
+export interface DeleteSessionResponse {
+  success: boolean;
+  message: string;
 }
 
 // Socket.io Event Types
@@ -100,6 +115,8 @@ export interface ServerToClientEvents {
   'consensus-reached': (data: { keywordIds: string[]; keywords: any[]; timestamp: string }) => void;
   'session-stats-updated': (data: { stats: any; timestamp: string }) => void;
   'user-typing': (data: { userId: string; isTyping: boolean; timestamp: string }) => void;
+  'session-deleted': (data: { message: string; adminName: string }) => void;
+  'name-conflict': (data: { name: string; conflictingUserCode: string }) => void;
   'error': (error: { message: string }) => void;
   'system-message': (data: { message: string; timestamp: string }) => void;
 }
@@ -108,7 +125,9 @@ export interface ServerToClientEvents {
 export interface User {
   id: string;
   name: string;
+  userCode: string; // 3-digit identification code
   isCreator: boolean;
+  isAdmin: boolean; // Admin rights
 }
 
 export interface UIState {

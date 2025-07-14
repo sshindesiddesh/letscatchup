@@ -10,7 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSession, useUser, useSessionStats, useSessionStore } from '../store/sessionStore';
-import { useAddKeyword, useVote, useSessionConnection } from '../hooks/useSession';
+import { useAddKeyword, useVote, useSessionConnection, useDeleteSession } from '../hooks/useSession';
 import { getCategoryInfo, getAllCategories, suggestCategory } from '../utils/categories';
 import { ConnectionStatus } from './ConnectionStatus';
 import { apiService } from '../services/apiService';
@@ -26,6 +26,7 @@ export function SessionPage() {
 
   const { addKeyword, isLoading: isAddingKeyword } = useAddKeyword();
   const { vote, isLoading: isVoting } = useVote();
+  const { deleteSession, isLoading: isDeletingSession, canDelete } = useDeleteSession();
 
   // Establish Socket.io connection for real-time updates
   const { isConnected } = useSessionConnection();
@@ -37,6 +38,7 @@ export function SessionPage() {
 
   const [showAddKeyword, setShowAddKeyword] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Fetch session data if not in store
   useEffect(() => {
@@ -141,6 +143,17 @@ export function SessionPage() {
     }
   };
 
+  const handleDeleteSession = async () => {
+    try {
+      await deleteSession();
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -162,13 +175,42 @@ export function SessionPage() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* User Code Display */}
+              {user && (
+                <div className="text-right">
+                  <div className="flex items-center space-x-2">
+                    {user.isAdmin && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        👑 Admin
+                      </span>
+                    )}
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-900">Code: {user.userCode}</div>
+                      <div className="text-xs text-gray-500">Remember this!</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <ConnectionStatus />
+
               <button
                 onClick={copyShareLink}
                 className="btn-secondary text-sm"
               >
                 📋 Copy invite link
               </button>
+
+              {/* Admin Delete Button */}
+              {canDelete && (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="btn-danger text-sm"
+                  disabled={isDeletingSession}
+                >
+                  🗑️ Delete Session
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -397,6 +439,36 @@ export function SessionPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Delete Session
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this session? This action cannot be undone and will remove all keywords and votes.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 btn-secondary"
+                disabled={isDeletingSession}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteSession}
+                className="flex-1 btn-danger"
+                disabled={isDeletingSession}
+              >
+                {isDeletingSession ? 'Deleting...' : 'Delete Session'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

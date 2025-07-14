@@ -13,6 +13,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { llmService } from './LLMService';
 import {
+  generateUserCode,
+  getExistingUserCodes,
+  isNameTakenInSession,
+  validateUserName,
+  isUserAdmin,
+  getParticipantById
+} from './userUtils';
+import {
   PlanningSession,
   Participant,
   Keyword,
@@ -37,7 +45,13 @@ export class SessionManager {
   /**
    * Create a new planning session (MVP: only one session at a time)
    */
-  createSession(description: string, creatorName: string): { sessionId: string; userId: string } {
+  createSession(description: string, creatorName: string): { sessionId: string; userId: string; userCode: string } {
+    // Validate creator name
+    const nameValidation = validateUserName(creatorName);
+    if (!nameValidation.isValid) {
+      throw new Error(nameValidation.error);
+    }
+
     // Clean up any existing session
     if (this.currentSession) {
       this.cleanupSession();
@@ -45,19 +59,23 @@ export class SessionManager {
 
     const sessionId = 'current'; // MVP: fixed session ID
     const userId = this.generateUserId();
+    const userCode = generateUserCode(); // Generate 3-digit code for creator
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
 
     const creator: Participant = {
       id: userId,
-      name: creatorName,
+      name: creatorName.trim(),
+      userCode,
       joinedAt: now,
-      isCreator: true
+      isCreator: true,
+      isAdmin: true // Creator is admin
     };
 
     this.currentSession = {
       id: sessionId,
       creator: userId,
+      adminUserId: userId, // Creator is initial admin
       description,
       participants: new Map([[userId, creator]]),
       keywords: new Map(),
@@ -73,8 +91,8 @@ export class SessionManager {
     // Set cleanup timer
     this.scheduleCleanup(expiresAt);
 
-    console.log(`📝 Session created: "${description}" by ${creatorName}`);
-    return { sessionId, userId };
+    console.log(`📝 Session created: "${description}" by ${creatorName} (Code: ${userCode})`);
+    return { sessionId, userId, userCode };
   }
 
   /**
@@ -83,6 +101,7 @@ export class SessionManager {
   async createSessionWithLLM(description: string, creatorName: string): Promise<{
     sessionId: string;
     userId: string;
+    userCode: string;
     analysis: {
       suggestedCategories: CategoryType[];
       context: string;
@@ -115,27 +134,102 @@ export class SessionManager {
   /**
    * Join an existing session
    */
-  joinSession(sessionId: string, name: string): { userId: string; success: boolean } {
+  joinSession(sessionId: string, name: string): {
+    userId: string;
+    userCode: string;
+    success: boolean;
+    error?: string
+  } {
     if (!this.currentSession || this.currentSession.id !== sessionId) {
-      return { userId: '', success: false };
+      return { userId: '', userCode: '', success: false, error: 'Session not found' };
     }
 
     if (this.currentSession.status !== 'active') {
-      return { userId: '', success: false };
+      return { userId: '', userCode: '', success: false, error: 'Session is not active' };
+    }
+
+    // Validate name format
+    const nameValidation = validateUserName(name);
+    if (!nameValidation.isValid) {
+      return { userId: '', userCode: '', success: false, error: nameValidation.error! };
+    }
+
+    // Check if name is already taken
+    if (isNameTakenInSession(this.currentSession, name)) {
+      return {
+        userId: '',
+        userCode: '',
+        success: false,
+        error: `Name "${name.trim()}" is already taken in this session. Please choose a different name.`
+      };
     }
 
     const userId = this.generateUserId();
+    const existingCodes = getExistingUserCodes(this.currentSession);
+    const userCode = generateUserCode(existingCodes);
+
     const participant: Participant = {
       id: userId,
-      name,
+      name: name.trim(),
+      userCode,
       joinedAt: new Date(),
-      isCreator: false
+      isCreator: false,
+      isAdmin: false
     };
 
     this.currentSession.participants.set(userId, participant);
-    
-    console.log(`👋 ${name} joined session: ${this.currentSession.description}`);
-    return { userId, success: true };
+
+    console.log(`👋 ${name} joined session: ${this.currentSession.description} (Code: ${userCode})`);
+    return { userId, userCode, success: true };
+  }
+
+  /**
+   * Rejoin an existing session using user code
+   */
+  rejoinSession(sessionId: string, userCode: string): {
+    userId: string;
+    userCode: string;
+    success: boolean;
+    error?: string;
+    userData?: {
+      name: string;
+      isCreator: boolean;
+      isAdmin: boolean;
+    };
+  } {
+    if (!this.currentSession || this.currentSession.id !== sessionId) {
+      return { userId: '', userCode: '', success: false, error: 'Session not found' };
+    }
+
+    if (this.currentSession.status !== 'active') {
+      return { userId: '', userCode: '', success: false, error: 'Session is not active' };
+    }
+
+    // Find participant by user code
+    const participant = Array.from(this.currentSession.participants.values())
+      .find(p => p.userCode === userCode);
+
+    if (!participant) {
+      return {
+        userId: '',
+        userCode: '',
+        success: false,
+        error: `User code "${userCode}" not found in this session. Please check your code or join as a new participant.`
+      };
+    }
+
+    console.log(`🔄 ${participant.name} rejoined session: ${this.currentSession.description} (Code: ${userCode})`);
+
+    return {
+      userId: participant.id,
+      userCode: participant.userCode,
+      success: true,
+      userData: {
+        name: participant.name,
+        isCreator: participant.isCreator,
+        isAdmin: participant.isAdmin
+      }
+    };
   }
 
   /**
@@ -146,6 +240,30 @@ export class SessionManager {
       return null;
     }
     return this.currentSession;
+  }
+
+  /**
+   * Delete the current session (admin only)
+   */
+  deleteSession(sessionId: string, userId: string): { success: boolean; error?: string } {
+    if (!this.currentSession || this.currentSession.id !== sessionId) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    // Check if user is admin
+    if (!isUserAdmin(this.currentSession, userId)) {
+      return { success: false, error: 'Only the session admin can delete the session' };
+    }
+
+    const adminParticipant = getParticipantById(this.currentSession, userId);
+    const adminName = adminParticipant?.name || 'Admin';
+
+    console.log(`🗑️ Session "${this.currentSession.description}" deleted by admin: ${adminName}`);
+
+    // Clean up the session
+    this.cleanupSession();
+
+    return { success: true };
   }
 
   /**
@@ -219,18 +337,23 @@ export class SessionManager {
   /**
    * Vote on a keyword
    */
-  vote(sessionId: string, userId: string, keywordId: string, value: VoteValue): boolean {
+  vote(sessionId: string, userId: string, keywordId: string, value: VoteValue): {
+    success: boolean;
+    error?: string;
+    totalScore?: number;
+    votes?: VoteData[];
+  } {
     if (!this.currentSession || this.currentSession.id !== sessionId) {
-      return false;
+      return { success: false, error: 'Session not found' };
     }
 
     if (!this.currentSession.participants.has(userId)) {
-      return false;
+      return { success: false, error: 'User not in session' };
     }
 
     const keyword = this.currentSession.keywords.get(keywordId);
     if (!keyword) {
-      return false;
+      return { success: false, error: 'Keyword not found' };
     }
 
     // Update or add vote
@@ -241,7 +364,7 @@ export class SessionManager {
     };
 
     keyword.votes.set(userId, vote);
-    
+
     // Recalculate total score
     keyword.totalScore = Array.from(keyword.votes.values())
       .reduce((sum, v) => sum + v.value, 0);
@@ -253,7 +376,14 @@ export class SessionManager {
     const voteText = value > 0 ? '+1' : '-1';
     console.log(`🗳️  ${participant?.name} voted ${voteText} on "${keyword.text}"`);
 
-    return true;
+    // Return detailed vote information
+    const votes = Array.from(keyword.votes.values()).map(this.serializeVote);
+
+    return {
+      success: true,
+      totalScore: keyword.totalScore,
+      votes
+    };
   }
 
   /**
@@ -263,6 +393,7 @@ export class SessionManager {
     return {
       id: session.id,
       creator: session.creator,
+      adminUserId: session.adminUserId,
       description: session.description,
       participants: Array.from(session.participants.values()).map(this.serializeParticipant),
       keywords: Array.from(session.keywords.values()).map(this.serializeKeyword),
@@ -277,8 +408,10 @@ export class SessionManager {
     return {
       id: participant.id,
       name: participant.name,
+      userCode: participant.userCode,
       joinedAt: participant.joinedAt.toISOString(),
-      isCreator: participant.isCreator
+      isCreator: participant.isCreator,
+      isAdmin: participant.isAdmin
     };
   }
 

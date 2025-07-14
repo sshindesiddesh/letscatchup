@@ -33,14 +33,17 @@ export interface Keyword {
 export interface Participant {
   id: string;
   name: string;
+  userCode: string; // 3-digit identification code
   joinedAt: Date;
   isCreator: boolean;
+  isAdmin: boolean; // Admin rights (initially same as isCreator)
   socketId?: string; // For real-time updates
 }
 
 export interface PlanningSession {
   id: string;
   creator: string; // userId of creator
+  adminUserId: string; // userId of current admin (initially same as creator)
   description: string;
   participants: Map<string, Participant>; // userId -> participant
   keywords: Map<string, Keyword>; // keywordId -> keyword
@@ -63,6 +66,7 @@ export interface CreateSessionResponse {
   sessionId: string;
   shareLink: string;
   userId: string;
+  userCode: string; // 3-digit code for the creator
 }
 
 export interface JoinSessionRequest {
@@ -71,6 +75,7 @@ export interface JoinSessionRequest {
 
 export interface JoinSessionResponse {
   userId: string;
+  userCode: string; // 3-digit code for the new participant
   sessionData: SessionData;
 }
 
@@ -86,10 +91,20 @@ export interface VoteRequest {
   value: VoteValue;
 }
 
+export interface DeleteSessionRequest {
+  userId: string; // Must be admin to delete
+}
+
+export interface DeleteSessionResponse {
+  success: boolean;
+  message: string;
+}
+
 // Serializable session data for API responses
 export interface SessionData {
   id: string;
   creator: string;
+  adminUserId: string; // Current admin user ID
   description: string;
   participants: ParticipantData[];
   keywords: KeywordData[];
@@ -105,8 +120,10 @@ export interface SessionData {
 export interface ParticipantData {
   id: string;
   name: string;
+  userCode: string; // 3-digit identification code
   joinedAt: string;
   isCreator: boolean;
+  isAdmin: boolean; // Admin rights
 }
 
 export interface KeywordData {
@@ -130,7 +147,7 @@ export interface SocketEvents {
   // Client to server
   'join-session': (data: { sessionId: string; userId: string }) => void;
   'leave-session': (data: { sessionId: string; userId: string }) => void;
-  
+
   // Server to client
   'session-updated': (sessionData: SessionData) => void;
   'participant-joined': (participant: ParticipantData) => void;
@@ -138,4 +155,6 @@ export interface SocketEvents {
   'keyword-added': (keyword: KeywordData) => void;
   'vote-updated': (data: { keywordId: string; votes: VoteData[]; totalScore: number }) => void;
   'consensus-reached': (keywordIds: string[]) => void;
+  'session-deleted': (data: { message: string; adminName: string }) => void;
+  'name-conflict': (data: { name: string; conflictingUserCode: string }) => void;
 }
