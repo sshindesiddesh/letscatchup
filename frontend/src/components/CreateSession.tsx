@@ -24,7 +24,7 @@ export function CreateSession() {
   });
 
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [mode, setMode] = useState<'create' | 'rejoin'>('create');
+  const [step, setStep] = useState<'choice' | 'create' | 'rejoin'>('choice');
   const [userCode, setUserCode] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,11 +70,7 @@ export function CreateSession() {
 
   const exampleDescriptions = [
     "weekend brunch with college friends downtown",
-    "team building activity for remote coworkers",
-    "birthday celebration dinner in the city",
     "casual coffee meetup for book club",
-    "outdoor hiking adventure with nature lovers",
-    "game night at someone's place",
   ];
 
   const handleExampleClick = (example: string) => {
@@ -82,16 +78,18 @@ export function CreateSession() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-center sm:justify-between">
             <div className="flex items-center space-x-3">
-              <div className="text-2xl">🤝</div>
-              <h1 className="text-xl font-bold text-gray-900">letscatchup.ai</h1>
+              <div className="text-xl sm:text-2xl">🤝</div>
+              <h1 className="text-xl sm:text-2xl font-bold text-blue-600" style={{ fontFamily: 'cursive' }}>
+                letscatchup
+              </h1>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 hidden sm:block">
               Collaborative meetup planning
             </div>
           </div>
@@ -99,242 +97,218 @@ export function CreateSession() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-2xl mx-auto px-6 py-12">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Plan Your Perfect Meetup
-          </h2>
-          <p className="text-lg text-gray-600 mb-6">
-            Describe your meetup idea and let your friends collaborate on the details
-          </p>
-          
-          {/* Category Preview */}
-          <div className="flex justify-center space-x-4 mb-8">
-            {getAllCategories().map(category => {
-              const info = getCategoryInfo(category);
-              return (
-                <div key={category} className={`px-3 py-2 rounded-lg ${info.bgColor} ${info.color} text-sm font-medium`}>
-                  <span className="mr-1">{info.icon}</span>
-                  {info.name}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <div className="flex-1 flex items-center justify-center px-6 py-8">
+        <div className="w-full max-w-2xl">
 
-        <>
-          {/* Mode Selection */}
-          <div className="card mb-6">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">What would you like to do?</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setMode('create')}
-                  className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                    mode === 'create'
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="font-medium text-gray-900">🚀 Create New Session</div>
-                  <div className="text-sm text-gray-600 mt-1">Start a new meetup planning session</div>
-                </button>
-                <button
-                  onClick={() => setMode('rejoin')}
-                  className={`p-4 border-2 rounded-lg text-left transition-colors ${
-                    mode === 'rejoin'
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="font-medium text-gray-900">🔄 Rejoin Session</div>
-                  <div className="text-sm text-gray-600 mt-1">I have a 3-digit code</div>
-                </button>
+          {/* Step 1: How it works (always visible at top) */}
+          {step === 'choice' && (
+            <div className="text-center mb-12">
+              <h2 className="text-2xl font-bold text-gray-900 mb-8">How it works</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">📝</span>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">1. Describe</h3>
+                  <p className="text-sm text-gray-600">Share your meetup idea and get a shareable link</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">👥</span>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">2. Invite</h3>
+                  <p className="text-sm text-gray-600">Friends join and add their preferences in real-time</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">🎯</span>
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">3. Decide</h3>
+                  <p className="text-sm text-gray-600">Vote together and reach consensus on the perfect plan</p>
+                </div>
+              </div>
+
+              {/* Choice Selection */}
+              <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 text-center">What would you like to do?</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setStep('create')}
+                    className="p-4 sm:p-6 border-2 border-blue-200 hover:border-blue-400 bg-blue-50 hover:bg-blue-100 rounded-lg text-left transition-all duration-200 group"
+                  >
+                    <div className="font-semibold text-gray-900 text-base sm:text-lg mb-2">🚀 Create New Catchup</div>
+                    <div className="text-sm text-gray-600">Start a new meetup planning session</div>
+                  </button>
+                  <button
+                    onClick={() => setStep('rejoin')}
+                    className="p-4 sm:p-6 border-2 border-gray-200 hover:border-gray-400 bg-gray-50 hover:bg-gray-100 rounded-lg text-left transition-all duration-200 group"
+                  >
+                    <div className="font-semibold text-gray-900 text-base sm:text-lg mb-2">🔄 Join Existing Catchup</div>
+                    <div className="text-sm text-gray-600">I have a 3-digit code</div>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Create Session Form */}
-          {mode === 'create' && (
-            <div className="card">
+          {step === 'create' && (
+            <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
               <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Description Field */}
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                Describe your meetup idea
-              </label>
-              <textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="e.g., weekend brunch with college friends downtown"
-                className="input-field h-24 resize-none"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Be specific! Mention when, where, what kind of activity, or food preferences.
-              </p>
-            </div>
+                {/* Description Field */}
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                    Describe your meetup idea
+                  </label>
+                  <textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="e.g., weekend brunch with college friends downtown"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={3}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Be specific! Mention when, where, what kind of activity, or food preferences.
+                  </p>
+                </div>
 
-            {/* Example Descriptions */}
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Need inspiration? Try these:</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {exampleDescriptions.map((example, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => handleExampleClick(example)}
-                    className="text-left p-3 text-sm text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    "{example}"
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Creator Name Field */}
-            <div>
-              <label htmlFor="creatorName" className="block text-sm font-medium text-gray-700 mb-2">
-                Your name
-              </label>
-              <input
-                id="creatorName"
-                type="text"
-                value={formData.creatorName}
-                onChange={(e) => handleInputChange('creatorName', e.target.value)}
-                placeholder="Your name"
-                className="input-field"
-                required
-              />
-            </div>
-
-            {/* Advanced Options Toggle */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-              >
-                {showAdvanced ? '▼' : '▶'} Advanced options
-              </button>
-              
-              {showAdvanced && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-gray-600">
-                    <p className="mb-2">🤖 <strong>AI-Powered Features:</strong></p>
-                    <ul className="list-disc list-inside space-y-1 text-xs">
-                      <li>Automatic keyword categorization using local LLM</li>
-                      <li>Smart suggestions based on your description</li>
-                      <li>Context-aware category recommendations</li>
-                    </ul>
+                {/* Example Descriptions - Only 2 most appealing */}
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Need inspiration? Try these:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleExampleClick("weekend brunch with college friends downtown")}
+                      className="text-left p-3 text-sm text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      "weekend brunch with college friends downtown"
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExampleClick("casual coffee meetup for book club")}
+                      className="text-left p-3 text-sm text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      "casual coffee meetup for book club"
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Error Display */}
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading || !formData.description.trim() || !formData.creatorName.trim()}
-              className="btn-primary w-full text-lg py-3"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Creating session...
-                </span>
-              ) : (
-                'Create Meetup Session'
-              )}
-            </button>
-          </form>
-          </div>
-        )}
-
-        {/* Rejoin Session Form */}
-        {mode === 'rejoin' && (
-          <div className="card">
-            <form onSubmit={handleRejoin} className="space-y-6">
-              <div>
-                <label htmlFor="userCode" className="block text-sm font-medium text-gray-700 mb-2">
-                  Enter your 3-digit code
-                </label>
-                <input
-                  id="userCode"
-                  type="text"
-                  value={userCode}
-                  onChange={(e) => setUserCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                  placeholder="123"
-                  className="input-field text-center text-2xl font-mono tracking-widest"
-                  maxLength={3}
-                  pattern="[0-9]{3}"
-                  required
-                  autoFocus
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  This is the 3-digit code you received when you first created or joined a session
-                </p>
-              </div>
-
-              {rejoinError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{rejoinError}</p>
+                {/* Creator Name Field */}
+                <div>
+                  <label htmlFor="creatorName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Your name
+                  </label>
+                  <input
+                    id="creatorName"
+                    type="text"
+                    value={formData.creatorName}
+                    onChange={(e) => handleInputChange('creatorName', e.target.value)}
+                    placeholder="Your name"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={isRejoining || userCode.length !== 3}
-                className="btn-primary w-full text-lg py-3"
-              >
-                {isRejoining ? (
-                  <span className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Rejoining session...
-                  </span>
-                ) : (
-                  'Rejoin Session'
+                {/* Advanced Options Toggle - Simplified */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {showAdvanced ? '▼' : '▶'} Advanced options
+                  </button>
+
+                  {showAdvanced && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="text-sm text-gray-600">
+                        <p className="mb-2"><strong>Enhanced Features:</strong></p>
+                        <ul className="list-disc list-inside space-y-1 text-xs">
+                          <li>Automatic keyword categorization</li>
+                          <li>Smart suggestions based on your description</li>
+                          <li>Real-time collaboration tools</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
                 )}
-              </button>
-            </form>
-          </div>
-        )}
-        </>
 
-        {/* How It Works */}
-        <div className="mt-12 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">How it works</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl">📝</span>
-              </div>
-              <h4 className="font-medium text-gray-900 mb-2">1. Describe</h4>
-              <p className="text-sm text-gray-600">Share your meetup idea and get a shareable link</p>
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading || !formData.description.trim() || !formData.creatorName.trim()}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Creating session...
+                    </span>
+                  ) : (
+                    'Create Meetup Session'
+                  )}
+                </button>
+              </form>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl">👥</span>
-              </div>
-              <h4 className="font-medium text-gray-900 mb-2">2. Invite</h4>
-              <p className="text-sm text-gray-600">Friends join and add their preferences in real-time</p>
+          )}
+
+          {/* Rejoin Session Form */}
+          {step === 'rejoin' && (
+            <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+              <form onSubmit={handleRejoin} className="space-y-6">
+                <div>
+                  <label htmlFor="userCode" className="block text-sm font-medium text-gray-700 mb-2">
+                    Enter your 3-digit code
+                  </label>
+                  <input
+                    id="userCode"
+                    type="text"
+                    value={userCode}
+                    onChange={(e) => setUserCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                    placeholder="123"
+                    className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-2xl font-mono tracking-widest"
+                    maxLength={3}
+                    pattern="[0-9]{3}"
+                    required
+                    autoFocus
+                  />
+                  <p className="text-xs text-gray-500 mt-1 text-center">
+                    This is the 3-digit code you received when you first created or joined a session
+                  </p>
+                </div>
+
+                {rejoinError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{rejoinError}</p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isRejoining || userCode.length !== 3}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+                >
+                  {isRejoining ? (
+                    <span className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Rejoining session...
+                    </span>
+                  ) : (
+                    'Rejoin Session'
+                  )}
+                </button>
+              </form>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl">🎯</span>
-              </div>
-              <h4 className="font-medium text-gray-900 mb-2">3. Decide</h4>
-              <p className="text-sm text-gray-600">Vote together and reach consensus on the perfect plan</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
