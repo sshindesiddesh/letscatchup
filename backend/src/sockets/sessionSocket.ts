@@ -92,11 +92,16 @@ export function setupSocketHandlers(io: Server) {
       }
 
       // Add keyword using session manager
-      const keyword = sessionManager.addKeyword(sessionId, userId, text, category as any);
-      if (keyword) {
-        // Broadcast new keyword to all participants
-        broadcastKeywordAdded(sessionId, keyword.id, io);
-        console.log(`📡 Broadcasted new keyword: "${text}" to session ${sessionId}`);
+      const result = sessionManager.addKeyword(sessionId, userId, text, category as any);
+      if (result.keyword) {
+        // Broadcast appropriate event based on whether it's a duplicate
+        if (result.isDuplicate) {
+          broadcastVoteUpdate(sessionId, result.keyword.id, io);
+          console.log(`📡 Broadcasted vote update for duplicate: "${text}" to session ${sessionId}`);
+        } else {
+          broadcastKeywordAdded(sessionId, result.keyword.id, io);
+          console.log(`📡 Broadcasted new keyword: "${text}" to session ${sessionId}`);
+        }
       } else {
         socket.emit('error', { message: 'Failed to add keyword' });
       }

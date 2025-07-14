@@ -486,26 +486,33 @@ sessionRouter.post('/current/keywords', (req: Request<{}, {}, AddKeywordRequest>
       });
     }
 
-    const keyword = sessionManager.addKeyword('current', userId, text.trim(), category);
+    const result = sessionManager.addKeyword('current', userId, text.trim(), category);
 
-    if (!keyword) {
+    if (!result.keyword) {
       return res.status(400).json({
         error: 'Failed to add keyword. Check session and user ID.'
       });
     }
 
-    // Broadcast new keyword to all participants
+    // Broadcast appropriate event based on whether it's a duplicate
     if (socketIO) {
-      broadcastKeywordAdded('current', keyword.id, socketIO);
+      if (result.isDuplicate) {
+        // Broadcast vote update for duplicate
+        broadcastVoteUpdate('current', result.keyword.id, socketIO);
+      } else {
+        // Broadcast new keyword for original
+        broadcastKeywordAdded('current', result.keyword.id, socketIO);
+      }
       broadcastSessionStats('current', socketIO);
     }
 
     return res.status(201).json({
-      id: keyword.id,
-      text: keyword.text,
-      category: keyword.category,
-      addedBy: keyword.addedBy,
-      createdAt: keyword.createdAt.toISOString()
+      id: result.keyword.id,
+      text: result.keyword.text,
+      category: result.keyword.category,
+      addedBy: result.keyword.addedBy,
+      createdAt: result.keyword.createdAt.toISOString(),
+      isDuplicate: result.isDuplicate
     });
   } catch (error) {
     console.error('Error adding keyword to current session:', error);
@@ -577,30 +584,36 @@ sessionRouter.post('/:sessionId/keywords', (req: Request<{ sessionId: string }, 
       });
     }
 
-    const keyword = sessionManager.addKeyword(sessionId, userId, text.trim(), category);
+    const result = sessionManager.addKeyword(sessionId, userId, text.trim(), category);
 
-    if (!keyword) {
+    if (!result.keyword) {
       return res.status(400).json({
         error: 'Failed to add keyword. Check session and user ID.'
       });
     }
 
-    // Broadcast new keyword to all participants
+    // Broadcast appropriate event based on whether it's a duplicate
     console.log('🔍 Checking socketIO for broadcast:', socketIO ? 'Available' : 'NULL');
     if (socketIO) {
-      console.log('📡 Calling broadcastKeywordAdded...');
-      broadcastKeywordAdded(sessionId, keyword.id, socketIO);
+      if (result.isDuplicate) {
+        console.log('📡 Calling broadcastVoteUpdate for duplicate...');
+        broadcastVoteUpdate(sessionId, result.keyword.id, socketIO);
+      } else {
+        console.log('📡 Calling broadcastKeywordAdded for new keyword...');
+        broadcastKeywordAdded(sessionId, result.keyword.id, socketIO);
+      }
       broadcastSessionStats(sessionId, socketIO);
     } else {
       console.log('❌ socketIO is null, cannot broadcast');
     }
 
     return res.status(201).json({
-      id: keyword.id,
-      text: keyword.text,
-      category: keyword.category,
-      addedBy: keyword.addedBy,
-      createdAt: keyword.createdAt.toISOString()
+      id: result.keyword.id,
+      text: result.keyword.text,
+      category: result.keyword.category,
+      addedBy: result.keyword.addedBy,
+      createdAt: result.keyword.createdAt.toISOString(),
+      isDuplicate: result.isDuplicate
     });
   } catch (error) {
     console.error('Error adding keyword:', error);

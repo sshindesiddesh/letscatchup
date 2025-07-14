@@ -269,21 +269,22 @@ export class SessionManager {
 
   /**
    * Add a keyword to the session (with deduplication and validation)
+   * Returns { keyword, isDuplicate } to help with broadcasting
    */
-  addKeyword(sessionId: string, userId: string, text: string, category: CategoryType): Keyword | null {
+  addKeyword(sessionId: string, userId: string, text: string, category: CategoryType): { keyword: Keyword | null; isDuplicate: boolean } {
     if (!this.currentSession || this.currentSession.id !== sessionId) {
-      return null;
+      return { keyword: null, isDuplicate: false };
     }
 
     if (!this.currentSession.participants.has(userId)) {
-      return null;
+      return { keyword: null, isDuplicate: false };
     }
 
     // Validate and normalize tag format
     const validation = validateTag(text);
     if (!validation.isValid) {
       console.log(`❌ Invalid tag format: "${text}" - ${validation.error}`);
-      return null;
+      return { keyword: null, isDuplicate: false };
     }
 
     const normalizedText = normalizeTag(text);
@@ -293,23 +294,34 @@ export class SessionManager {
       .find(k => normalizeTag(k.text) === normalizedText);
 
     if (existingKeyword) {
-      // Add a vote from this user to the existing keyword instead of creating duplicate
-      const vote: Vote = {
-        userId,
-        value: 1, // Default positive vote when adding duplicate
-        timestamp: new Date()
-      };
+      // Check if user already voted on this keyword
+      const existingVote = existingKeyword.votes.get(userId);
 
-      existingKeyword.votes.set(userId, vote);
+      if (existingVote) {
+        // User already voted, just update the timestamp to show recent activity
+        // Keep the vote value as 1 (positive) since they're adding the same idea again
+        existingVote.timestamp = new Date();
+
+        const participant = this.currentSession.participants.get(userId);
+        console.log(`🔄 ${participant?.name} reinforced existing tag: "${existingKeyword.text}"`);
+      } else {
+        // Add a new vote from this user to the existing keyword
+        const vote: Vote = {
+          userId,
+          value: 1, // Default positive vote when adding duplicate
+          timestamp: new Date()
+        };
+        existingKeyword.votes.set(userId, vote);
+
+        const participant = this.currentSession.participants.get(userId);
+        console.log(`🔄 ${participant?.name} added vote to existing tag: "${existingKeyword.text}"`);
+      }
 
       // Recalculate total score
       existingKeyword.totalScore = Array.from(existingKeyword.votes.values())
         .reduce((sum, v) => sum + v.value, 0);
 
-      const participant = this.currentSession.participants.get(userId);
-      console.log(`🔄 ${participant?.name} added vote to existing tag: "${existingKeyword.text}"`);
-
-      return existingKeyword;
+      return { keyword: existingKeyword, isDuplicate: true };
     }
 
     // Create new keyword if no duplicate found
@@ -330,7 +342,7 @@ export class SessionManager {
     const participant = this.currentSession.participants.get(userId);
     console.log(`💡 ${participant?.name} added tag: "${normalizedText}" (${category})`);
 
-    return keyword;
+    return { keyword, isDuplicate: false };
   }
 
   /**
@@ -366,7 +378,8 @@ export class SessionManager {
     }
 
     // Create the keyword using the regular method
-    return this.addKeyword(sessionId, userId, text, category);
+    const result = this.addKeyword(sessionId, userId, text, category);
+    return result.keyword;
   }
 
   /**
