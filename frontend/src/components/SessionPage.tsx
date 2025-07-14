@@ -36,7 +36,7 @@ export function SessionPage() {
     category: 'activity' as CategoryType,
   });
 
-  const [showAddKeyword, setShowAddKeyword] = useState(false);
+
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -110,17 +110,18 @@ export function SessionPage() {
     try {
       await addKeyword(newKeyword.text.trim(), newKeyword.category);
       setNewKeyword({ text: '', category: 'activity' });
-      setShowAddKeyword(false);
     } catch (error) {
       console.error('Failed to add keyword:', error);
     }
   };
 
   const handleVote = async (keywordId: string, value: 1 | -1) => {
+    console.log('🗳️ Voting on keyword:', keywordId, 'with value:', value);
     try {
       await vote(keywordId, value);
+      console.log('✅ Vote successful');
     } catch (error) {
-      console.error('Failed to vote:', error);
+      console.error('❌ Failed to vote:', error);
     }
   };
 
@@ -216,179 +217,184 @@ export function SessionPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Add Keyword Section */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Add Your Ideas</h2>
-                <button
-                  onClick={() => setShowAddKeyword(!showAddKeyword)}
-                  className="btn-primary text-sm"
-                >
-                  {showAddKeyword ? 'Cancel' : '+ Add Idea'}
-                </button>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        {/* Message Input Bar */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 p-4">
+          <div className="flex items-center space-x-3">
+            <input
+              type="text"
+              value={newKeyword.text}
+              onChange={(e) => handleKeywordTextChange(e.target.value)}
+              placeholder="Type your message or idea..."
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
+            />
+            <button
+              onClick={handleAddKeyword}
+              disabled={isAddingKeyword || !newKeyword.text.trim()}
+              className="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAddingKeyword ? '...' : 'Send'}
+            </button>
+          </div>
+        </div>
 
-              {showAddKeyword && (
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <input
-                      type="text"
-                      value={newKeyword.text}
-                      onChange={(e) => handleKeywordTextChange(e.target.value)}
-                      placeholder="e.g., Saturday 11AM, Central Park, pizza..."
-                      className="input-field"
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Category (auto-suggested)
-                    </label>
-                    <div className="flex space-x-2">
-                      {getAllCategories().map(category => {
-                        const info = getCategoryInfo(category);
-                        const isSelected = newKeyword.category === category;
-                        return (
-                          <button
-                            key={category}
-                            type="button"
-                            onClick={() => setNewKeyword(prev => ({ ...prev, category }))}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              isSelected
-                                ? `${info.bgColor} ${info.color} border-2 border-current`
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                          >
-                            <span className="mr-1">{info.icon}</span>
-                            {info.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleAddKeyword}
-                    disabled={isAddingKeyword || !newKeyword.text.trim()}
-                    className="btn-primary w-full"
-                  >
-                    {isAddingKeyword ? 'Adding...' : 'Add Idea'}
-                  </button>
+        {/* 3-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-280px)]">
+          {/* Left: Chat History */}
+          <div className="lg:col-span-1 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900">Messages</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+              {session.keywords.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="text-2xl mb-2">💬</div>
+                  <p className="text-sm">No messages yet</p>
+                  <p className="text-xs">Start the conversation!</p>
                 </div>
+              ) : (
+                session.keywords
+                  .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                  .map(keyword => {
+                    const author = session.participants.find(p => p.id === keyword.addedBy);
+                    return (
+                      <div key={keyword.id} className="flex space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-blue-600 font-medium text-sm">
+                            {author?.name.charAt(0).toUpperCase() || '?'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-gray-900">{author?.name || 'Unknown'}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(keyword.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 mt-1">{keyword.text}</p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className="text-xs text-gray-500">
+                              {keyword.votes.filter(v => v.value === 1).length} votes
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
               )}
             </div>
+          </div>
 
-            {/* Keywords by Category */}
-            {getAllCategories().map(category => {
-              const categoryKeywords = session.keywords.filter(k => k.category === category);
-              if (categoryKeywords.length === 0) return null;
-
-              const info = getCategoryInfo(category);
-              
-              return (
-                <div key={category} className="card">
-                  <div className="flex items-center mb-4">
-                    <div className={`px-3 py-1 rounded-lg ${info.bgColor} ${info.color} text-sm font-medium mr-3`}>
-                      <span className="mr-1">{info.icon}</span>
-                      {info.name}
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {categoryKeywords.length} idea{categoryKeywords.length !== 1 ? 's' : ''}
-                    </span>
+          {/* Center: Visual Voting Board */}
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900">Ideas Board</h3>
+              <p className="text-sm text-gray-500">
+                Click to vote • Size shows popularity
+                {session.keywords.length > 10 && (
+                  <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                    Showing top 10 of {session.keywords.length}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex-1 p-6 overflow-y-auto">
+              {session.keywords.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-center">
+                  <div>
+                    <div className="text-4xl mb-4">💡</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No ideas yet</h3>
+                    <p className="text-gray-600">Send your first message to get started!</p>
                   </div>
-                  
-                  <div className="space-y-3">
-                    {categoryKeywords
-                      .sort((a, b) => b.totalScore - a.totalScore)
-                      .map(keyword => {
-                        const userVote = keyword.votes.find(vote => vote.userId === user.id);
-                        const positiveVotes = keyword.votes.filter(v => v.value === 1).length;
-                        const negativeVotes = keyword.votes.filter(v => v.value === -1).length;
-                        
-                        return (
-                          <div key={keyword.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex-1">
-                              <span className="font-medium">{keyword.text}</span>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Added by {session.participants.find(p => p.id === keyword.addedBy)?.name || 'Unknown'}
-                              </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-4 justify-center items-center h-full">
+                  {session.keywords
+                    .sort((a, b) => {
+                      // Sort by votes (descending), then by creation time (latest first) for ties
+                      if (b.totalScore !== a.totalScore) {
+                        return b.totalScore - a.totalScore;
+                      }
+                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    })
+                    .slice(0, 10) // Limit to top 10 ideas
+                    .map(keyword => {
+                      const userVote = keyword.votes.find(vote => vote.userId === user.id);
+                      const voteCount = keyword.votes.filter(v => v.value === 1).length;
+
+                      // Calculate size based on votes (min 120px, max 240px)
+                      const baseSize = 120;
+                      const maxSize = 240;
+                      const sizeIncrement = Math.min(voteCount * 20, maxSize - baseSize);
+                      const size = baseSize + sizeIncrement;
+
+                      return (
+                        <div
+                          key={keyword.id}
+                          className={`relative bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border-2 border-blue-200 p-4 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 ${
+                            userVote?.value === 1 ? 'ring-2 ring-blue-500 bg-gradient-to-br from-blue-100 to-blue-200' : ''
+                          } ${isVoting ? 'opacity-50 cursor-wait' : ''}`}
+                          style={{
+                            width: `${size}px`,
+                            height: `${size}px`,
+                            minWidth: '120px',
+                            minHeight: '120px'
+                          }}
+                          onClick={() => !isVoting && handleVote(keyword.id, userVote?.value === 1 ? -1 : 1)}
+                        >
+                          <div className="flex flex-col h-full justify-between">
+                            <div className="flex-1 flex items-center justify-center text-center">
+                              <p className="text-sm font-medium text-gray-900 leading-tight">
+                                {keyword.text}
+                              </p>
                             </div>
-                            
-                            <div className="flex items-center space-x-3">
-                              <div className="text-sm text-gray-600">
-                                Score: <span className="font-medium">{keyword.totalScore}</span>
-                              </div>
-                              
-                              <div className="flex items-center space-x-1">
-                                <button
-                                  onClick={() => handleVote(keyword.id, 1)}
-                                  disabled={isVoting}
-                                  className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
-                                    userVote?.value === 1
-                                      ? 'bg-green-100 text-green-700 border border-green-300'
-                                      : 'bg-gray-100 text-gray-700 hover:bg-green-50'
-                                  }`}
-                                >
-                                  👍 {positiveVotes}
-                                </button>
-                                <button
-                                  onClick={() => handleVote(keyword.id, -1)}
-                                  disabled={isVoting}
-                                  className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
-                                    userVote?.value === -1
-                                      ? 'bg-red-100 text-red-700 border border-red-300'
-                                      : 'bg-gray-100 text-gray-700 hover:bg-red-50'
-                                  }`}
-                                >
-                                  👎 {negativeVotes}
-                                </button>
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-blue-600">{voteCount}</div>
+                              <div className="text-xs text-gray-500">
+                                {voteCount === 1 ? 'vote' : 'votes'}
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
-                  </div>
+                          {userVote?.value === 1 && (
+                            <div className="absolute top-2 right-2 text-blue-600">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  }
                 </div>
-              );
-            })}
-
-            {session.keywords.length === 0 && (
-              <div className="card text-center py-12">
-                <div className="text-4xl mb-4">💡</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No ideas yet</h3>
-                <p className="text-gray-600 mb-4">Be the first to add an idea for your meetup!</p>
-                <button
-                  onClick={() => setShowAddKeyword(true)}
-                  className="btn-primary"
-                >
-                  Add First Idea
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
+          {/* Right: Participants & Stats */}
+          <div className="lg:col-span-1 space-y-4">
+
             {/* Participants */}
-            <div className="card">
-              <h3 className="font-semibold mb-4">Participants ({session.participants.length})</h3>
-              <div className="space-y-2">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-4 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-900">Participants ({session.participants.length})</h3>
+              </div>
+              <div className="p-4 space-y-3 max-h-64 overflow-y-auto">
                 {session.participants.map(participant => (
                   <div key={participant.id} className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-primary-600 font-medium text-sm">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 font-medium text-sm">
                         {participant.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div>
-                      <div className="font-medium">{participant.name}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{participant.name}</div>
                       {participant.isCreator && (
                         <div className="text-xs text-gray-500">Creator</div>
                       )}
                     </div>
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                   </div>
                 ))}
               </div>
@@ -396,19 +402,21 @@ export function SessionPage() {
 
             {/* Session Stats */}
             {stats && (
-              <div className="card">
-                <h3 className="font-semibold mb-4">Session Stats</h3>
-                <div className="space-y-2 text-sm">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="font-semibold text-gray-900">Session Stats</h3>
+                </div>
+                <div className="p-4 space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span>Ideas:</span>
+                    <span className="text-gray-600">Ideas:</span>
                     <span className="font-medium">{stats.keywordCount}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Total votes:</span>
+                    <span className="text-gray-600">Total votes:</span>
                     <span className="font-medium">{stats.totalVotes}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Consensus reached:</span>
+                    <span className="text-gray-600">Consensus reached:</span>
                     <span className="font-medium">{stats.consensusCount}</span>
                   </div>
                 </div>
@@ -416,24 +424,28 @@ export function SessionPage() {
             )}
 
             {/* Share Section */}
-            <div className="card">
-              <h3 className="font-semibold mb-4">Invite Friends</h3>
-              <p className="text-sm text-gray-600 mb-3">
-                Share this link with friends to let them join the planning:
-              </p>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={shareLink}
-                  readOnly
-                  className="input-field text-xs flex-1"
-                />
-                <button
-                  onClick={copyShareLink}
-                  className="btn-secondary text-xs px-3"
-                >
-                  Copy
-                </button>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-4 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-900">Invite Friends</h3>
+              </div>
+              <div className="p-4">
+                <p className="text-sm text-gray-600 mb-3">
+                  Share this link with friends to let them join the planning:
+                </p>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={shareLink}
+                    readOnly
+                    className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-md bg-gray-50"
+                  />
+                  <button
+                    onClick={copyShareLink}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-xs"
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
             </div>
           </div>

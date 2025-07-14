@@ -170,24 +170,30 @@ export function useVote() {
     setError(null);
 
     try {
-      // Call API - this will trigger Socket.io events automatically
-      const response = await apiService.vote(session.id, {
+      // Call API for current session - this will trigger Socket.io events automatically
+      const response = await apiService.voteInCurrent({
         userId: user.id,
         keywordId,
         value,
       });
 
+      console.log('✅ Vote response:', response);
+
       // Immediately update local state (don't wait for Socket.io)
       const { updateKeyword } = useSessionStore.getState();
       updateKeyword(keywordId, {
         totalScore: response.totalScore,
-        // Note: We don't update votes array here as it's complex
-        // The Socket.io event will handle the full vote update
+        votes: response.votes.map(vote => ({
+          userId: vote.userId,
+          value: vote.value as 1 | -1,
+          timestamp: vote.timestamp
+        })),
       });
 
     } catch (err) {
       const error = err as ApiError;
       setError(error.message);
+      console.error('❌ Vote failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
