@@ -487,6 +487,7 @@ sessionRouter.post('/current/keywords', (req: Request<{}, {}, AddKeywordRequest>
     }
 
     const result = sessionManager.addKeyword('current', userId, text.trim(), category);
+    console.log(`🔍 Route: isDuplicate=${result.isDuplicate}, keyword=${result.keyword?.id}`);
 
     if (!result.keyword) {
       return res.status(400).json({
@@ -497,9 +498,11 @@ sessionRouter.post('/current/keywords', (req: Request<{}, {}, AddKeywordRequest>
     // Broadcast appropriate event based on whether it's a duplicate
     if (socketIO) {
       if (result.isDuplicate) {
+        console.log(`📡 Route: Broadcasting vote-updated for duplicate`);
         // Broadcast vote update for duplicate
         broadcastVoteUpdate('current', result.keyword.id, socketIO);
       } else {
+        console.log(`📡 Route: Broadcasting keyword-added for new keyword`);
         // Broadcast new keyword for original
         broadcastKeywordAdded('current', result.keyword.id, socketIO);
       }

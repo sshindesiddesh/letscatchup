@@ -33,6 +33,11 @@ export function setupSocketHandlers(io: Server) {
       console.log(`🔍 Session found:`, !!session);
       console.log(`🔍 User in session:`, session?.participants.has(userId));
 
+      if (session) {
+        console.log(`🔍 Session participants:`, Array.from(session.participants.keys()));
+        console.log(`🔍 Looking for userId:`, userId);
+      }
+
       if (!session || !session.participants.has(userId)) {
         console.log(`❌ Invalid session or user - sessionId: ${sessionId}, userId: ${userId}`);
         socket.emit('error', { message: 'Invalid session or user' });
@@ -42,6 +47,10 @@ export function setupSocketHandlers(io: Server) {
       // Join the session room
       socket.join(sessionId);
       console.log(`✅ Socket ${socket.id} joined room: ${sessionId}`);
+
+      // Debug: Check how many sockets are in the room
+      const roomSockets = io.sockets.adapter.rooms.get(sessionId);
+      console.log(`🔍 Room ${sessionId} now has ${roomSockets?.size || 0} sockets`);
 
       // Update participant with socket ID for tracking
       const participant = session.participants.get(userId);
@@ -207,6 +216,13 @@ export function broadcastSessionUpdate(sessionId: string, io: Server) {
 export function broadcastKeywordAdded(sessionId: string, keywordId: string, io: Server) {
   console.log(`📡 Broadcasting keyword-added event for session ${sessionId}, keyword ${keywordId}`);
 
+  // Debug: Check room status
+  const roomSockets = io.sockets.adapter.rooms.get(sessionId);
+  console.log(`🔍 Room ${sessionId} has ${roomSockets?.size || 0} sockets`);
+  if (roomSockets) {
+    console.log(`🔍 Socket IDs in room:`, Array.from(roomSockets));
+  }
+
   const session = sessionManager.getSession(sessionId);
   if (!session) {
     console.log(`❌ Session ${sessionId} not found for broadcast`);
@@ -242,11 +258,26 @@ export function broadcastKeywordAdded(sessionId: string, keywordId: string, io: 
  * Broadcast when votes are updated
  */
 export function broadcastVoteUpdate(sessionId: string, keywordId: string, io: Server) {
+  console.log(`📡 Broadcasting vote-updated event for session ${sessionId}, keyword ${keywordId}`);
+
+  // Debug: Check room status
+  const roomSockets = io.sockets.adapter.rooms.get(sessionId);
+  console.log(`🔍 Room ${sessionId} has ${roomSockets?.size || 0} sockets`);
+  if (roomSockets) {
+    console.log(`🔍 Socket IDs in room:`, Array.from(roomSockets));
+  }
+
   const session = sessionManager.getSession(sessionId);
-  if (!session) return;
+  if (!session) {
+    console.log(`❌ broadcastVoteUpdate: Session ${sessionId} not found`);
+    return;
+  }
 
   const keyword = session.keywords.get(keywordId);
-  if (!keyword) return;
+  if (!keyword) {
+    console.log(`❌ broadcastVoteUpdate: Keyword ${keywordId} not found in session ${sessionId}`);
+    return;
+  }
 
   const voteData = {
     keywordId: keyword.id,
@@ -258,7 +289,9 @@ export function broadcastVoteUpdate(sessionId: string, keywordId: string, io: Se
     totalScore: keyword.totalScore
   };
 
+  console.log(`📡 Emitting vote-updated to room ${sessionId}:`, voteData);
   io.to(sessionId).emit('vote-updated', voteData);
+  console.log(`✅ Broadcasted vote-updated event successfully`);
 }
 
 /**

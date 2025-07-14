@@ -28,6 +28,10 @@ class SocketService {
 
   // Connect to Socket.io server
   connect() {
+    console.log('🔌 connect() called - checking current state...');
+    console.log('🔌 Current socket:', this.socket ? 'exists' : 'null');
+    console.log('🔌 Current socket connected:', this.socket?.connected);
+
     if (this.socket?.connected) {
       console.log('🔌 Already connected to Socket.io server');
       return;
@@ -42,18 +46,23 @@ class SocketService {
     const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
     console.log('🔌 Creating new Socket.io connection to:', serverUrl);
-    this.socket = io(serverUrl, {
-      transports: ['websocket', 'polling'],
-      timeout: 20000,
-      autoConnect: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    });
+    console.log('🔌 Environment VITE_API_URL:', import.meta.env.VITE_API_URL);
 
-    this.setupSocketEventListeners();
+    try {
+      this.socket = io(serverUrl, {
+        transports: ['websocket', 'polling'],
+        timeout: 20000,
+        autoConnect: true,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+      });
 
-    console.log('🔌 Socket.io connection initiated...');
+      this.setupSocketEventListeners();
+      console.log('🔌 Socket.io connection initiated successfully');
+    } catch (error) {
+      console.error('🔌 Error creating Socket.io connection:', error);
+    }
   }
 
   // Disconnect from server
@@ -169,32 +178,34 @@ class SocketService {
       console.log('💡 New keyword added via Socket.io:', keywordData.text);
       console.log('🔍 Full keyword data:', keywordData);
 
-      // Get current user to avoid duplicate additions
-      const currentUser = useSessionStore.getState().user;
-
-      // Only add if it's not from the current user (to prevent duplicates)
-      if (!currentUser || keywordData.addedBy !== currentUser.id) {
-        console.log('✅ Adding keyword from other user');
-        useSessionStore.getState().addKeyword(keywordData);
-      } else {
-        console.log('🚫 Ignoring own keyword to prevent duplicate');
-      }
+      // Always add keywords to the store, regardless of who added them
+      // The backend handles deduplication, so we should trust the events it sends
+      console.log('✅ Adding keyword to store');
+      useSessionStore.getState().addKeyword(keywordData);
     });
 
     this.socket.on('vote-updated', (data) => {
       console.log('🗳️ Vote updated:', data.keywordId, 'Score:', data.totalScore, 'Votes:', data.votes);
+      console.log('🗳️ Full vote-updated data:', data);
 
       // Update keyword with new vote data including votes array
       const { session } = useSessionStore.getState();
       if (session) {
+        console.log('🔍 Current keywords in store:', session.keywords.map(k => ({ id: k.id, text: k.text })));
         const keyword = session.keywords.find(k => k.id === data.keywordId);
         if (keyword) {
+          console.log('✅ Found keyword to update:', keyword.text, keyword.id);
           useSessionStore.getState().updateKeyword(data.keywordId, {
             totalScore: data.totalScore,
             votes: data.votes, // Update the full votes array
           });
           console.log('✅ Updated keyword votes in store');
+        } else {
+          console.log('⚠️ Keyword not found in store for vote update:', data.keywordId);
+          console.log('⚠️ Available keyword IDs:', session.keywords.map(k => k.id));
         }
+      } else {
+        console.log('⚠️ No session found in store');
       }
     });
 

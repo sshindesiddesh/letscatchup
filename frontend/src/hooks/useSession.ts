@@ -123,22 +123,11 @@ export function useAddKeyword() {
 
     try {
       // Call API - this will trigger Socket.io events automatically
-      const response = await apiService.addKeyword(session.id, {
+      // Don't update local state immediately, let Socket.io handle it
+      await apiService.addKeyword(session.id, {
         userId: user.id,
         text,
         category,
-      });
-
-      // Immediately update local state (don't wait for Socket.io)
-      const { addKeyword: addKeywordToStore } = useSessionStore.getState();
-      addKeywordToStore({
-        id: response.id,
-        text: response.text,
-        category: response.category as CategoryType,
-        addedBy: response.addedBy,
-        createdAt: response.createdAt,
-        votes: [],
-        totalScore: 0,
       });
 
     } catch (err) {
@@ -237,6 +226,14 @@ export function useSessionConnection() {
   const { isConnected } = useUIState();
   const hasJoinedRef = useRef<string | null>(null);
 
+  // Debug logging for connection state
+  useEffect(() => {
+    console.log('🔍 useSessionConnection - State check:');
+    console.log('🔍 session:', session ? `ID: ${session.id}` : 'null');
+    console.log('🔍 user:', user ? `ID: ${user.id}, Name: ${user.name}` : 'null');
+    console.log('🔍 isConnected:', isConnected);
+  }, [session, user, isConnected]);
+
   // Auto-connect when session and user are available
   useEffect(() => {
     if (session && user) {
@@ -246,7 +243,13 @@ export function useSessionConnection() {
       if (!isConnected) {
         console.log('🔌 Connecting to Socket.io...');
         socketService.connect();
+      } else {
+        console.log('🔍 Already connected, skipping connection attempt');
       }
+    } else {
+      console.log('🔍 Not connecting - missing data:');
+      console.log('🔍 session:', !!session);
+      console.log('🔍 user:', !!user);
     }
   }, [session, user, isConnected]);
 
