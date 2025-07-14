@@ -34,7 +34,9 @@ POST /api/session/create
 ```json
 {
   "sessionId": "current",
-  "userId": "user_abc123"
+  "shareLink": "/join/current",
+  "userId": "user_abc123",
+  "userCode": "123"
 }
 ```
 
@@ -87,9 +89,71 @@ POST /api/session/current/join
 {
   "sessionId": "current",
   "userId": "user_def456",
+  "userCode": "456",
   "session": {
     // Full session object
   }
+}
+```
+
+#### Rejoin Session
+```http
+POST /api/session/current/rejoin
+```
+
+**Request Body:**
+```json
+{
+  "userCode": "123"
+}
+```
+
+**Response:**
+```json
+{
+  "userId": "user_abc123",
+  "userCode": "123",
+  "userData": {
+    "name": "John Doe",
+    "isCreator": true,
+    "isAdmin": true
+  },
+  "sessionData": {
+    // Full session object
+  }
+}
+```
+
+**Error Response (Invalid Code):**
+```json
+{
+  "error": "User code \"999\" not found in this session. Please check your code or join as a new participant."
+}
+```
+
+#### Delete Session (Admin Only)
+```http
+DELETE /api/session/current
+```
+
+**Headers:**
+```
+Authorization: Bearer {userId}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Session deleted successfully"
+}
+```
+
+**Error Response (Non-Admin):**
+```json
+{
+  "success": false,
+  "message": "Only the session admin can delete the session"
 }
 ```
 
@@ -197,6 +261,51 @@ socket.on('user-joined', (data) => {
   // data: { userId, name, sessionId }
 });
 ```
+
+### Important Notes
+
+#### Real-time Event Filtering
+The frontend automatically filters out events from the current user to prevent duplicate displays:
+```javascript
+socket.on('keyword-added', (keywordData) => {
+  const currentUser = useSessionStore.getState().user;
+
+  // Only add if it's not from the current user (prevents duplicates)
+  if (!currentUser || keywordData.addedBy !== currentUser.id) {
+    addKeywordToUI(keywordData);
+  }
+});
+```
+
+#### Connection Stability
+Socket.io connections use these settings for reliability:
+```javascript
+const socket = io(serverUrl, {
+  transports: ['websocket', 'polling'],
+  timeout: 20000,
+  autoConnect: true,
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: 5,
+});
+```
+
+## User Code System
+
+### Overview
+Each user gets a unique 3-digit code (e.g., 123, 456) for easy session rejoining.
+
+### Features
+- **Memorable**: Easy-to-remember 3-digit numeric codes
+- **Unique**: Each user gets a unique code within their session
+- **Persistent**: Use codes to rejoin sessions after browser refresh/close
+- **Admin Status**: Session creators maintain admin privileges when rejoining
+
+### Usage
+1. **Create Session**: Get your user code when creating a session
+2. **Remember Code**: Note your 3-digit code for future access
+3. **Rejoin**: Use the code to rejoin the session with your original identity
+4. **Share**: Other users get their own unique codes when joining
 
 ## Data Types
 
